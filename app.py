@@ -1,220 +1,116 @@
 import streamlit as st
+import json
 import random
+import time
 
-# ------------------------ إعداد الصفحة ------------------------
-st.set_page_config(page_title="لعبة الأسئلة والأجوبة", page_icon="🎮", layout="centered")
+# إعدادات الصفحة
+st.set_page_config(page_title="لعبة الأسئلة 🎮", layout="centered")
 
-# خلفية نيون ستايل ألعاب
-NEON_BG = """
+# CSS للخلفية + تنسيقات
+page_bg = """
 <style>
-.stApp {
-    background-image: url('https://wallpapercave.com/wp/wp9116622.jpg');
+[data-testid="stAppViewContainer"] {
+    background-image: url("https://i.postimg.cc/tRdJ6Qss/gaming-bg.jpg");
     background-size: cover;
-    background-repeat: no-repeat;
+    background-position: center;
     background-attachment: fixed;
 }
-.block-container{
-    backdrop-filter: blur(6px);
-    background: rgba(0,0,0,0.35);
-    padding: 2rem 2rem;
-    border-radius: 16px;
-}
-h1, h2, h3, h4, h5, h6, p, label, span, div, .stMarkdown {
-    color: #ffffff !important;
-}
-.stRadio > div { gap: .75rem; }
-.button-like {
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
-    border: 1px solid rgba(255,255,255,0.25);
-    background: rgba(255,255,255,0.08);
+[data-testid="stHeader"] {background: rgba(0,0,0,0);}
+[data-testid="stToolbar"] {visibility: hidden;}
+.question-box {
+    background: rgba(0,0,0,0.65);
+    padding: 20px;
+    border-radius: 15px;
+    color: white;
+    font-size: 20px;
 }
 </style>
 """
-st.markdown(NEON_BG, unsafe_allow_html=True)
+st.markdown(page_bg, unsafe_allow_html=True)
 
-# ------------------------ بنك الأسئلة (عدل كما تحب) ------------------------
-QUESTIONS = [
-    {
-        "question": "ما هي عاصمة الجزائر؟",
-        "options": ["الجزائر", "وهران", "قسنطينة", "عنابة"],
-        "answer": "الجزائر",
-        "explanation": "الجزائر العاصمة هي المركز السياسي والاقتصادي للبلاد."
-    },
-    {
-        "question": "ما هو الكوكب المعروف بالكوكب الأحمر؟",
-        "options": ["عطارد", "الزهرة", "المريخ", "زحل"],
-        "answer": "المريخ",
-        "explanation": "يُسمّى بالمريخ بسبب لون تربته المائل إلى الأحمر."
-    },
-    {
-        "question": "من اخترع المصباح الكهربائي عملياً؟",
-        "options": ["نيكولا تسلا", "ألكسندر غراهام بيل", "توماس إديسون", "ألبرت أينشتاين"],
-        "answer": "توماس إديسون",
-        "explanation": "ساهم إديسون في تطوير المصباح وجعله عملياً للاستخدام."
-    },
-    {
-        "question": "كم عدد قارات العالم؟",
-        "options": ["5", "6", "7", "8"],
-        "answer": "7",
-        "explanation": "آسيا، إفريقيا، أوروبا، أمريكا الشمالية، أمريكا الجنوبية، أوقيانوسيا، القارة القطبية الجنوبية."
-    },
-    {
-        "question": "ما هي عاصمة فرنسا؟",
-        "options": ["مدريد", "روما", "برلين", "باريس"],
-        "answer": "باريس",
-        "explanation": "باريس تُعرف بمدينة النور وهي العاصمة الفرنسية."
-    },
-    {
-        "question": "ما هي اللغة الخاصة بتنسيق صفحات الويب؟",
-        "options": ["HTML", "CSS", "Python", "SQL"],
-        "answer": "CSS",
-        "explanation": "CSS مسؤولة عن تنسيق الشكل والتصميم في صفحات الويب."
-    },
-    {
-        "question": "كم نتيجة 8 × 7 ؟",
-        "options": ["54", "56", "58", "64"],
-        "answer": "56",
-        "explanation": "8 ضرب 7 يساوي 56."
-    },
-    {
-        "question": "أكبر كوكب في المجموعة الشمسية هو:",
-        "options": ["زحل", "نبتون", "المشتري", "أورانوس"],
-        "answer": "المشتري",
-        "explanation": "المشتري هو الأكبر حجماً وكتلةً بين كواكب المجموعة."
-    },
-    {
-        "question": "ما هي وحدة قياس القدرة الكهربائية؟",
-        "options": ["فولت", "أوم", "واط", "أمبير"],
-        "answer": "واط",
-        "explanation": "الواط تقيس القدرة (معدل استهلاك أو إنتاج الطاقة)."
-    },
-    {
-        "question": "أي من التالي لغة برمجة؟",
-        "options": ["HTTP", "CSS", "Python", "DNS"],
-        "answer": "Python",
-        "explanation": "HTTP وDNS بروتوكولات، CSS للتنسيق، وPython لغة برمجة."
-    }
-]
+# تحميل الأسئلة
+with open("questions.json", "r", encoding="utf-8") as f:
+    questions = json.load(f)
 
-# ------------------------ حالة الجلسة ------------------------
-if "player" not in st.session_state:
-    st.session_state.player = None
+# خزن الحالة
+if "player_name" not in st.session_state:
+    st.session_state.player_name = ""
 if "score" not in st.session_state:
     st.session_state.score = 0
-if "remaining" not in st.session_state:
-    # ننسخ ونخلط الأسئلة مرة واحدة
-    st.session_state.remaining = random.sample(QUESTIONS, k=len(QUESTIONS))
-if "current" not in st.session_state:
-    st.session_state.current = None
-if "awaiting_answer" not in st.session_state:
-    st.session_state.awaiting_answer = False
-if "selected" not in st.session_state:
-    st.session_state.selected = None
+if "q_index" not in st.session_state:
+    st.session_state.q_index = 0
+if "start_time" not in st.session_state:
+    st.session_state.start_time = None
+if "leaderboard" not in st.session_state:
+    st.session_state.leaderboard = []
 
-# ------------------------ دوال مساعدة ------------------------
-def new_question():
-    """يجلب سؤالاً جديداً (بدون تكرار) من القائمة المتبقية."""
-    if st.session_state.remaining:
-        st.session_state.current = st.session_state.remaining.pop(0)
-        st.session_state.awaiting_answer = True
-        st.session_state.selected = None
-    else:
-        st.session_state.current = None
-        st.session_state.awaiting_answer = False
-
-def reset_game():
-    st.session_state.score = 0
-    st.session_state.remaining = random.sample(QUESTIONS, k=len(QUESTIONS))
-    st.session_state.current = None
-    st.session_state.awaiting_answer = False
-    st.session_state.selected = None
-
-def play_sound(url: str):
-    """يشغل صوت (قد يتطلب تفاعل المستخدم للسماح بالتشغيل التلقائي في بعض المتصفحات)."""
-    st.markdown(
-        f"""
-        <audio autoplay style="display:none;">
-            <source src="{url}">
-        </audio>
-        """,
-        unsafe_allow_html=True
-    )
-
-# ------------------------ إدخال اسم اللاعب ------------------------
-st.title("🎮 لعبة الأسئلة والأجوبة")
-if not st.session_state.player:
-    name = st.text_input("✨ أدخل اسمك للبدء", value="")
-    start = st.button("🚀 ابدأ اللعبة")
-    if start:
-        if name.strip():
-            st.session_state.player = name.strip()
-            reset_game()
-            new_question()
-            st.rerun()
-        else:
-            st.warning("⚠️ من فضلك أدخل اسم صالح")
+# إدخال اسم اللاعب
+if not st.session_state.player_name:
+    st.session_state.player_name = st.text_input("✨ ادخل اسمك للبدء")
+    if st.session_state.player_name:
+        st.success(f"مرحبا {st.session_state.player_name} 👋")
+        st.session_state.start_time = time.time()
+        st.rerun()
     st.stop()
 
-# ------------------------ شريط التقدم والنقاط ------------------------
-total = len(QUESTIONS)
-answered = total - len(st.session_state.remaining) - (1 if st.session_state.current else 0)
-progress = (answered) / total if total else 0
-st.progress(progress, text=f"التقدّم: {answered}/{total}")
-st.write(f"👋 مرحبًا **{st.session_state.player}** — نقاطك الحالية: **{st.session_state.score}**")
+# إظهار النقاط
+st.markdown(f"### 🏅 نقاطك الحالية: {st.session_state.score}")
 
-# ------------------------ عرض السؤال الحالي ------------------------
-if st.session_state.current is None:
-    # إذا لا يوجد سؤال حالي، نجيب واحد جديد أو ننهي اللعبة
-    new_question()
+# جلب السؤال الحالي
+if st.session_state.q_index < len(questions):
+    q = questions[st.session_state.q_index]
 
-if st.session_state.current:
-    q = st.session_state.current
-    st.markdown(f"## ❓ {q['question']}")
+    # مؤقت
+    time_limit = 15
+    elapsed = int(time.time() - st.session_state.start_time)
+    remaining = time_limit - elapsed
 
-    # نضيف خياراً تمهيدياً لتفادي اختيار تلقائي (متوافق مع كل إصدارات ستريملت)
-    display_options = ["— اختر إجابة —"] + q["options"]
-    choice = st.radio("الاختيارات:", options=display_options, index=0, key=f"q_{answered}")
-
-    col1, col2 = st.columns([1,1])
-    with col1:
-        confirm = st.button("✅ تأكيد الإجابة", use_container_width=True)
-    with col2:
-        skip = st.button("⏭️ تخطي هذا السؤال", use_container_width=True)
-
-    if confirm:
-        if choice == "— اختر إجابة —":
-            st.warning("⚠️ اختر إجابة أولاً.")
-        else:
-            st.session_state.selected = choice
-            st.session_state.awaiting_answer = False
-            # تصحيح
-            if choice == q["answer"]:
-                st.success("🎉 إجابة صحيحة! أحسنت 👏")
-                st.session_state.score += 1
-                play_sound("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg")
-                st.balloons()
-            else:
-                st.error(f"❌ إجابة خاطئة! الصحيحة هي: **{q['answer']}**")
-                play_sound("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg")
-            # شرح إن وُجد
-            if q.get("explanation"):
-                st.info(f"ℹ️ شرح: {q['explanation']}")
-            # زر التالي
-            if st.button("➡️ السؤال التالي", use_container_width=True):
-                new_question()
-                st.rerun()
-
-    if skip and st.session_state.awaiting_answer:
-        # تخطي السؤال بدون تصحيح
-        new_question()
+    if remaining <= 0:
+        st.warning("⏰ انتهى الوقت! تخسر هذه الجولة...")
+        st.session_state.q_index += 1
+        st.session_state.start_time = time.time()
         st.rerun()
 
+    st.progress(remaining / time_limit)
+
+    st.markdown(f"<div class='question-box'>❓ {q['question']}</div>", unsafe_allow_html=True)
+
+    answer = st.radio("الاختيارات:", q["options"], index=None)
+
+    if st.button("إجابة ✅"):
+        if answer:
+            if answer == q["answer"]:
+                st.success("إجابة صحيحة 🎉👏")
+                # نقاط حسب الصعوبة
+                if q["difficulty"] == "easy":
+                    st.session_state.score += 1
+                elif q["difficulty"] == "medium":
+                    st.session_state.score += 2
+                elif q["difficulty"] == "hard":
+                    st.session_state.score += 3
+            else:
+                st.error("إجابة خاطئة ❌")
+            st.session_state.q_index += 1
+            st.session_state.start_time = time.time()
+            st.rerun()
 else:
-    # ------------------------ نهاية اللعبة ------------------------
-    st.success(f"🎉 مبروك {st.session_state.player}! أنهيت كل الأسئلة.")
-    st.write(f"🔢 مجموع نقاطك: **{st.session_state.score}** / **{total}**")
-    if st.button("🔄 إعادة اللعب", use_container_width=True):
-        reset_game()
-        new_question()
+    st.balloons()
+    st.success(f"🎮 انتهت اللعبة! مجموع نقاطك: {st.session_state.score}")
+
+    # حفظ النتيجة في لوحة المتصدرين
+    st.session_state.leaderboard.append(
+        {"name": st.session_state.player_name, "score": st.session_state.score}
+    )
+    st.session_state.leaderboard = sorted(
+        st.session_state.leaderboard, key=lambda x: x["score"], reverse=True
+    )[:5]
+
+    st.subheader("🏆 لوحة المتصدرين")
+    for idx, player in enumerate(st.session_state.leaderboard, 1):
+        st.write(f"{idx}. {player['name']} — {player['score']} نقطة")
+
+    if st.button("🔄 إعادة اللعب"):
+        st.session_state.score = 0
+        st.session_state.q_index = 0
+        st.session_state.start_time = time.time()
         st.rerun()
