@@ -3,97 +3,96 @@ import json
 import random
 import os
 
-# تحميل الأسئلة من ملف JSON
+# تحميل الأسئلة
 def load_questions():
     with open("questions.json", "r", encoding="utf-8") as f:
         return json.load(f)
 
-# تحميل ترتيب النقاط
+# تحميل الترتيب
 def load_leaderboard():
-    if not os.path.exists("leaderboard.json"):
-        return []
-    with open("leaderboard.json", "r", encoding="utf-8") as f:
-        return json.load(f)
+    if os.path.exists("leaderboard.json"):
+        with open("leaderboard.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
 
 # حفظ الترتيب
-def save_leaderboard(leaderboard):
+def save_leaderboard(data):
     with open("leaderboard.json", "w", encoding="utf-8") as f:
-        json.dump(leaderboard, f, ensure_ascii=False, indent=4)
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
-# بداية البرنامج
-st.set_page_config(page_title="لعبة الألغاز 🧩", page_icon="🎮", layout="centered")
+# إعداد الصفحة
+st.set_page_config(page_title="لعبة الألغاز والأسئلة 🎮", page_icon="🧩", layout="centered")
 
-# خلفية CSS
-page_bg = """
-<style>
-[data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-[data-testid="stHeader"] {
-    background: rgba(0,0,0,0);
-}
-.big-font {
-    font-size:24px !important;
-}
-</style>
-"""
-st.markdown(page_bg, unsafe_allow_html=True)
+st.markdown(
+    """
+    <style>
+    body {
+        background-color: #f0f2f6;
+    }
+    .main {
+        background: linear-gradient(135deg, #6EE7B7 0%, #3B82F6 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-st.title("🎮 لعبة الألغاز والأسئلة 🧩")
-st.write("أجب عن الأسئلة واجمع النقاط! 🚀")
-
-# تحميل البيانات
-questions = load_questions()
-leaderboard = load_leaderboard()
-
-# تهيئة الجلسة
-if "score" not in st.session_state:
+# الحالة
+if "questions" not in st.session_state:
+    st.session_state.questions = load_questions()
+    random.shuffle(st.session_state.questions)
+    st.session_state.index = 0
     st.session_state.score = 0
-if "q_index" not in st.session_state:
-    st.session_state.q_index = 0
-if "username" not in st.session_state:
     st.session_state.username = ""
 
 # إدخال اسم اللاعب
 if st.session_state.username == "":
-    st.session_state.username = st.text_input("أدخل اسمك لبدء اللعبة ✨")
-    if st.session_state.username:
-        st.session_state.score = 0
-        st.session_state.q_index = 0
-        st.experimental_rerun()
-
+    st.title("🎮 لعبة الألغاز والأسئلة 🧩")
+    st.subheader("أجب عن الأسئلة واجمع النقاط 🚀")
+    name = st.text_input("أدخل اسمك لبدء اللعبة ✨")
+    if st.button("ابدأ"):
+        if name.strip() != "":
+            st.session_state.username = name.strip()
+            st.rerun()
+        else:
+            st.warning("⚠️ من فضلك أدخل اسمك للمتابعة")
 else:
-    # عرض سؤال
-    if st.session_state.q_index < len(questions):
-        q = questions[st.session_state.q_index]
-        st.markdown(f"### ❓ السؤال {st.session_state.q_index+1}: {q['question']}")
+    # عرض السؤال الحالي
+    if st.session_state.index < len(st.session_state.questions):
+        q = st.session_state.questions[st.session_state.index]
+        st.header(f"❓ السؤال {st.session_state.index + 1}: {q['question']}")
 
-        # عرض الخيارات
-        answer = st.radio("اختر الإجابة الصحيحة 👇", q["options"], key=st.session_state.q_index)
+        options = q["options"]
+        answer = st.radio("اختر الإجابة:", options, key=f"q{st.session_state.index}")
 
-        if st.button("إرسال"):
+        if st.button("إرسال الإجابة"):
             if answer == q["answer"]:
-                st.success("✅ إجابة صحيحة! أحسنت 🎉")
+                st.success("✅ إجابة صحيحة! أحسنت 👏")
                 st.session_state.score += 1
             else:
-                st.error(f"❌ إجابة خاطئة! الصح هو: {q['answer']}")
-
-            st.session_state.q_index += 1
-            st.experimental_rerun()
-
+                st.error(f"❌ خطأ! الجواب الصحيح هو: {q['answer']}")
+            st.session_state.index += 1
+            st.rerun()
     else:
-        st.subheader(f"انتهت اللعبة! 🏆 مجموع نقاطك: {st.session_state.score}")
+        # عرض النتيجة النهائية
+        st.success(f"🎉 انتهت اللعبة! نتيجتك: {st.session_state.score}/{len(st.session_state.questions)}")
 
-        # حفظ النقاط في الترتيب
+        leaderboard = load_leaderboard()
         leaderboard.append({"name": st.session_state.username, "score": st.session_state.score})
-        leaderboard = sorted(leaderboard, key=lambda x: x["score"], reverse=True)[:10]  # أفضل 10
+        leaderboard = sorted(leaderboard, key=lambda x: x["score"], reverse=True)[:10]
         save_leaderboard(leaderboard)
 
-        st.write("📊 أفضل اللاعبين:")
-        for i, player in enumerate(leaderboard, start=1):
-            st.write(f"{i}. {player['name']} — {player['score']} نقطة")
+        st.subheader("🏆 لوحة المتصدرين:")
+        for i, entry in enumerate(leaderboard, start=1):
+            st.write(f"{i}. {entry['name']} - {entry['score']} نقطة")
 
-        if st.button("إعادة اللعب 🔄"):
+        if st.button("🔄 العب من جديد"):
+            st.session_state.questions = load_questions()
+            random.shuffle(st.session_state.questions)
+            st.session_state.index = 0
+            st.session_state.score = 0
             st.session_state.username = ""
-            st.experimental_rerun()
+            st.rerun()
