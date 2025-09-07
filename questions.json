@@ -1,306 +1,256 @@
 {
   "ar": [
     {
-      "question": "ما هو أطول نهر في العالم؟",
-      "options": ["النيل", "الأمازون", "اليانغتسي", "الدانوب"],
-      "answer": "الأمازون",
-      "hint": "يوجد في أمريكا الجنوبية"
+      "question": "ما هو أكبر كوكب في المجموعة الشمسية؟",
+      "options": ["الأرض", "المشتري", "زحل", "المريخ"],
+      "answer": "المشتري"
     },
     {
-      "question": "من هو أول خليفة عباسي؟",
-      "options": ["أبو العباس السفاح", "هارون الرشيد", "المأمون", "المنصور"],
-      "answer": "أبو العباس السفاح",
-      "hint": "لقب بالسفاح"
+      "question": "في أي عام تم افتتاح قناة السويس لأول مرة؟",
+      "options": ["1869", "1914", "1805", "1900"],
+      "answer": "1869"
     },
     {
-      "question": "كم يبلغ عدد الكواكب في المجموعة الشمسية؟",
-      "options": ["7", "8", "9", "10"],
-      "answer": "8",
-      "hint": "بعد حذف بلوتو"
+      "question": "ما هو العنصر الكيميائي الذي رمزه O؟",
+      "options": ["ذهب", "أكسجين", "فضة", "حديد"],
+      "answer": "أكسجين"
     },
     {
-      "question": "ما هو الحيوان الذي لا ينام أبداً؟",
-      "options": ["التمساح", "القرش", "الدولفين", "الثعبان"],
-      "answer": "القرش",
-      "hint": "يبقى في حركة مستمرة للتنفس"
+      "question": "من هو مؤسس الدولة العباسية؟",
+      "options": ["أبو جعفر المنصور", "أبو العباس السفاح", "هارون الرشيد", "المأمون"],
+      "answer": "أبو العباس السفاح"
     },
     {
-      "question": "من هو مكتشف الدورة الدموية الصغرى؟",
-      "options": ["ابن سينا", "ابن النفيس", "الرازي", "ابن رشد"],
-      "answer": "ابن النفيس",
-      "hint": "طبيب عربي مسلم"
+      "question": "ما هي أطول آية في القرآن الكريم؟",
+      "options": ["آية الدين", "آية الكرسي", "آية الميراث", "آية الصيام"],
+      "answer": "آية الدين"
     },
     {
-      "question": "ما هي أكبر قارة في العالم؟",
-      "options": ["إفريقيا", "آسيا", "أوروبا", "أمريكا الشمالية"],
-      "answer": "آسيا",
-      "hint": "تضم أكثر من نصف سكان العالم"
+      "question": "كم عدد الأهرامات في الجيزة؟",
+      "options": ["3", "5", "7", "10"],
+      "answer": "3"
     },
     {
-      "question": "في أي عام سقطت الدولة العثمانية؟",
-      "options": ["1914", "1918", "1923", "1930"],
-      "answer": "1923",
-      "hint": "بعد الحرب العالمية الأولى"
-    },
-    {
-      "question": "ما هو الغاز الأكثر وفرة في الغلاف الجوي؟",
-      "options": ["الأكسجين", "ثاني أكسيد الكربون", "النيتروجين", "الهيليوم"],
-      "answer": "النيتروجين",
-      "hint": "يشكل حوالي 78%"
-    },
-    {
-      "question": "من هو الفيلسوف الذي علّم الإسكندر الأكبر؟",
-      "options": ["سقراط", "أفلاطون", "أرسطو", "هيرودوت"],
-      "answer": "أرسطو",
-      "hint": "من كبار الفلاسفة اليونان"
-    },
-    {
-      "question": "ما هو أسرع طائر في العالم؟",
-      "options": ["النسر", "الصقر", "النعامة", "الحمامة"],
-      "answer": "الصقر",
-      "hint": "سرعته تتجاوز 300 كم/س"
+      "question": "من هو مكتشف أمريكا؟",
+      "options": ["ماجلان", "كريستوفر كولومبوس", "فاسكو دا غاما", "ماركو بولو"],
+      "answer": "كريستوفر كولومبوس"
     },
     {
       "question": "ما هي عاصمة اليابان؟",
-      "options": ["أوساكا", "طوكيو", "كيوتو", "ناغويا"],
-      "answer": "طوكيو",
-      "hint": "مدينة التكنولوجيا"
+      "options": ["طوكيو", "أوساكا", "كيوتو", "ناجازاكي"],
+      "answer": "طوكيو"
     },
     {
-      "question": "ما اسم أول جامعة في التاريخ؟",
-      "options": ["الأزهر", "جامعة بولونيا", "القرويين", "السوربون"],
-      "answer": "القرويين",
-      "hint": "تأسست في المغرب"
+      "question": "من هو أول رئيس للولايات المتحدة الأمريكية؟",
+      "options": ["توماس جيفرسون", "جورج واشنطن", "جون آدامز", "أبراهام لنكولن"],
+      "answer": "جورج واشنطن"
     },
     {
-      "question": "أي كوكب يلقب بالكوكب الأحمر؟",
-      "options": ["المريخ", "زحل", "عطارد", "الأرض"],
-      "answer": "المريخ",
-      "hint": "سطحه يحتوي على الكثير من أكسيد الحديد"
+      "question": "ما هي أسرع حيوان بري؟",
+      "options": ["الفهد", "الأسد", "الغزال", "الذئب"],
+      "answer": "الفهد"
     },
     {
-      "question": "من هو مؤسس علم الاجتماع؟",
-      "options": ["ابن خلدون", "ابن رشد", "ابن سينا", "الفارابي"],
-      "answer": "ابن خلدون",
-      "hint": "صاحب المقدمة الشهيرة"
+      "question": "من هو مخترع المصباح الكهربائي؟",
+      "options": ["ألكسندر بيل", "توماس إديسون", "جراهام بل", "ماركوني"],
+      "answer": "توماس إديسون"
     },
     {
-      "question": "ما هي أسرع وسيلة نقل في العالم حالياً؟",
-      "options": ["القطار", "السيارة", "طائرة الكونكورد", "الهايبرلوب"],
-      "answer": "الهايبرلوب",
-      "hint": "مشروع من ابتكار إيلون ماسك"
+      "question": "كم قارة توجد في العالم؟",
+      "options": ["5", "6", "7", "8"],
+      "answer": "7"
     },
     {
-      "question": "أي دولة تعتبر الأكبر في إنتاج النفط؟",
-      "options": ["السعودية", "الولايات المتحدة", "روسيا", "إيران"],
-      "answer": "الولايات المتحدة",
-      "hint": "تتصدر منذ 2018"
+      "question": "ما هو أكبر محيط في العالم؟",
+      "options": ["الأطلسي", "الهندي", "المحيط الجنوبي", "الهادئ"],
+      "answer": "الهادئ"
     },
     {
-      "question": "من هو صاحب نظرية النسبية؟",
-      "options": ["نيوتن", "آينشتاين", "كوبرنيكوس", "جاليليو"],
-      "answer": "آينشتاين",
-      "hint": "عالم فيزياء ألماني"
+      "question": "ما هي وحدة قياس القوة؟",
+      "options": ["جول", "نيوتن", "واط", "أمبير"],
+      "answer": "نيوتن"
     },
     {
-      "question": "كم عدد أضلاع جسم الإنسان؟",
-      "options": ["12", "22", "24", "26"],
-      "answer": "24",
-      "hint": "12 زوج"
+      "question": "أين توجد أكبر صحراء في العالم؟",
+      "options": ["أفريقيا", "آسيا", "أستراليا", "أمريكا الجنوبية"],
+      "answer": "أفريقيا"
     },
     {
-      "question": "ما اسم أسرع حيوان بري؟",
-      "options": ["النمر", "الغزال", "الفهد الصياد", "الأسد"],
-      "answer": "الفهد الصياد",
-      "hint": "سرعته تصل إلى 110 كم/س"
+      "question": "من هو العالم الذي وضع قانون الجاذبية؟",
+      "options": ["غاليليو", "نيوتن", "أينشتاين", "كوبرنيكوس"],
+      "answer": "نيوتن"
     },
     {
-      "question": "ما هو أقدم علم في العالم؟",
-      "options": ["الرياضيات", "الفلك", "الفلسفة", "الطب"],
-      "answer": "الرياضيات",
-      "hint": "استخدم منذ الحضارة البابلية"
+      "question": "كم عدد أضلاع المربع؟",
+      "options": ["3", "4", "5", "6"],
+      "answer": "4"
     },
     {
-      "question": "من أول من استخدم البارود؟",
-      "options": ["الصينيون", "العرب", "الفرس", "الرومان"],
-      "answer": "الصينيون",
-      "hint": "اكتشف في القرن التاسع"
+      "question": "أين تقع مدينة البندقية؟",
+      "options": ["إسبانيا", "إيطاليا", "فرنسا", "البرتغال"],
+      "answer": "إيطاليا"
     },
     {
-      "question": "أي دولة اخترعت الطباعة لأول مرة؟",
-      "options": ["الصين", "ألمانيا", "الهند", "اليابان"],
-      "answer": "الصين",
-      "hint": "قبل غوتنبرغ بقرون"
+      "question": "ما هي أول جامعة في العالم؟",
+      "options": ["الأزهر", "القرويين", "بغداد", "أوكسفورد"],
+      "answer": "القرويين"
     },
     {
-      "question": "ما هي أكبر صحراء في العالم؟",
-      "options": ["الصحراء الكبرى", "صحراء جوبي", "صحراء أريزونا", "القطب الجنوبي"],
-      "answer": "القطب الجنوبي",
-      "hint": "ليست حارة بل متجمدة"
+      "question": "من هو مكتشف قانون أرخميدس؟",
+      "options": ["أرخميدس", "فيثاغورس", "إقليدس", "سقراط"],
+      "answer": "أرخميدس"
     },
     {
-      "question": "من هو العالم الذي اكتشف البنسلين؟",
-      "options": ["باستور", "فليمنغ", "كوخ", "داروين"],
-      "answer": "فليمنغ",
-      "hint": "اكتشفه بالصدفة سنة 1928"
+      "question": "أكبر دولة في العالم من حيث المساحة؟",
+      "options": ["الصين", "كندا", "روسيا", "أمريكا"],
+      "answer": "روسيا"
     },
     {
-      "question": "في أي عام وصل الإنسان إلى القمر؟",
-      "options": ["1965", "1969", "1971", "1975"],
-      "answer": "1969",
-      "hint": "رحلة أبولو 11"
+      "question": "ما هي اللغة الأكثر انتشاراً في العالم؟",
+      "options": ["الإنجليزية", "العربية", "الصينية", "الإسبانية"],
+      "answer": "الصينية"
+    },
+    {
+      "question": "كم دقيقة في ثلاث ساعات؟",
+      "options": ["120", "150", "180", "200"],
+      "answer": "180"
+    },
+    {
+      "question": "أين يقع جبل إيفرست؟",
+      "options": ["الهند", "النيبال", "الصين", "باكستان"],
+      "answer": "النيبال"
+    },
+    {
+      "question": "ما هو الحيوان الذي يُلقب بسفينة الصحراء؟",
+      "options": ["الحصان", "الجمل", "الحمار الوحشي", "الزرافة"],
+      "answer": "الجمل"
     }
   ],
   "en": [
     {
-      "question": "Which is the largest desert in the world?",
-      "options": ["Sahara", "Gobi", "Antarctica", "Kalahari"],
-      "answer": "Antarctica",
-      "hint": "It’s icy, not hot!"
+      "question": "What is the largest planet in the Solar System?",
+      "options": ["Earth", "Jupiter", "Saturn", "Mars"],
+      "answer": "Jupiter"
     },
     {
-      "question": "Who is known as the father of modern physics?",
-      "options": ["Einstein", "Newton", "Galileo", "Tesla"],
-      "answer": "Galileo",
-      "hint": "Italian scientist"
+      "question": "In which year was the Suez Canal first opened?",
+      "options": ["1869", "1914", "1805", "1900"],
+      "answer": "1869"
     },
     {
-      "question": "What is the capital of Canada?",
-      "options": ["Toronto", "Vancouver", "Ottawa", "Montreal"],
-      "answer": "Ottawa",
-      "hint": "Not the largest city"
+      "question": "What is the chemical symbol for Oxygen?",
+      "options": ["Au", "O", "Ag", "Fe"],
+      "answer": "O"
     },
     {
-      "question": "What is the hardest natural substance on Earth?",
-      "options": ["Gold", "Diamond", "Iron", "Quartz"],
-      "answer": "Diamond",
-      "hint": "Used in cutting tools"
+      "question": "Who founded the Abbasid Caliphate?",
+      "options": ["Abu Jaafar al-Mansur", "Abu al-Abbas al-Saffah", "Harun al-Rashid", "Al-Ma'mun"],
+      "answer": "Abu al-Abbas al-Saffah"
     },
     {
-      "question": "Who painted the Mona Lisa?",
-      "options": ["Michelangelo", "Raphael", "Leonardo da Vinci", "Picasso"],
-      "answer": "Leonardo da Vinci",
-      "hint": "Also an inventor"
+      "question": "Which is the longest verse in the Holy Quran?",
+      "options": ["Ayat al-Dayn", "Ayat al-Kursi", "Ayat al-Mirath", "Ayat al-Siyam"],
+      "answer": "Ayat al-Dayn"
     },
     {
-      "question": "Which country hosted the first modern Olympic Games?",
-      "options": ["France", "Italy", "Greece", "USA"],
-      "answer": "Greece",
-      "hint": "Athens, 1896"
+      "question": "How many pyramids are there in Giza?",
+      "options": ["3", "5", "7", "10"],
+      "answer": "3"
     },
     {
-      "question": "Which is the smallest continent?",
-      "options": ["Europe", "Australia", "South America", "Antarctica"],
-      "answer": "Australia",
-      "hint": "It’s also a country"
+      "question": "Who discovered America?",
+      "options": ["Magellan", "Christopher Columbus", "Vasco da Gama", "Marco Polo"],
+      "answer": "Christopher Columbus"
     },
     {
-      "question": "Who is the Greek god of the sea?",
-      "options": ["Zeus", "Ares", "Poseidon", "Hades"],
-      "answer": "Poseidon",
-      "hint": "Brother of Zeus"
+      "question": "What is the capital of Japan?",
+      "options": ["Tokyo", "Osaka", "Kyoto", "Nagasaki"],
+      "answer": "Tokyo"
     },
     {
-      "question": "Which organ purifies blood in the human body?",
-      "options": ["Heart", "Liver", "Kidney", "Lungs"],
-      "answer": "Kidney",
-      "hint": "We have two of them"
+      "question": "Who was the first president of the USA?",
+      "options": ["Thomas Jefferson", "George Washington", "John Adams", "Abraham Lincoln"],
+      "answer": "George Washington"
     },
     {
       "question": "What is the fastest land animal?",
-      "options": ["Cheetah", "Horse", "Leopard", "Tiger"],
-      "answer": "Cheetah",
-      "hint": "Over 100 km/h"
+      "options": ["Cheetah", "Lion", "Gazelle", "Wolf"],
+      "answer": "Cheetah"
     },
     {
-      "question": "Who invented the telephone?",
-      "options": ["Edison", "Bell", "Tesla", "Morse"],
-      "answer": "Bell",
-      "hint": "Scottish scientist"
+      "question": "Who invented the electric bulb?",
+      "options": ["Alexander Bell", "Thomas Edison", "Graham Bell", "Marconi"],
+      "answer": "Thomas Edison"
     },
     {
-      "question": "Which planet is closest to the sun?",
-      "options": ["Venus", "Mercury", "Earth", "Mars"],
-      "answer": "Mercury",
-      "hint": "It has no atmosphere"
+      "question": "How many continents are there in the world?",
+      "options": ["5", "6", "7", "8"],
+      "answer": "7"
     },
     {
-      "question": "Which is the largest mammal?",
-      "options": ["Elephant", "Blue Whale", "Giraffe", "Hippopotamus"],
-      "answer": "Blue Whale",
-      "hint": "Lives in the ocean"
+      "question": "What is the largest ocean in the world?",
+      "options": ["Atlantic", "Indian", "Southern", "Pacific"],
+      "answer": "Pacific"
     },
     {
-      "question": "What year did World War II end?",
-      "options": ["1943", "1945", "1947", "1950"],
-      "answer": "1945",
-      "hint": "After Hiroshima and Nagasaki"
+      "question": "What is the SI unit of force?",
+      "options": ["Joule", "Newton", "Watt", "Ampere"],
+      "answer": "Newton"
     },
     {
-      "question": "What is the chemical symbol for gold?",
-      "options": ["Ag", "Au", "Go", "Gd"],
-      "answer": "Au",
-      "hint": "From Latin: Aurum"
+      "question": "Where is the largest desert in the world located?",
+      "options": ["Africa", "Asia", "Australia", "South America"],
+      "answer": "Africa"
     },
     {
-      "question": "Which planet has the most moons?",
-      "options": ["Earth", "Mars", "Jupiter", "Saturn"],
-      "answer": "Saturn",
-      "hint": "More than 80 moons"
+      "question": "Who formulated the law of gravity?",
+      "options": ["Galileo", "Newton", "Einstein", "Copernicus"],
+      "answer": "Newton"
     },
     {
-      "question": "Who discovered gravity?",
-      "options": ["Einstein", "Galileo", "Newton", "Kepler"],
-      "answer": "Newton",
-      "hint": "Apple fell on his head"
+      "question": "How many sides does a square have?",
+      "options": ["3", "4", "5", "6"],
+      "answer": "4"
     },
     {
-      "question": "What is the capital of South Korea?",
-      "options": ["Busan", "Seoul", "Tokyo", "Pyongyang"],
-      "answer": "Seoul",
-      "hint": "A megacity"
+      "question": "Where is Venice located?",
+      "options": ["Spain", "Italy", "France", "Portugal"],
+      "answer": "Italy"
     },
     {
-      "question": "Which blood type is universal donor?",
-      "options": ["A", "B", "O-", "AB+"],
-      "answer": "O-",
-      "hint": "Used in emergencies"
+      "question": "What is the first university in the world?",
+      "options": ["Al-Azhar", "Al-Qarawiyyin", "Baghdad", "Oxford"],
+      "answer": "Al-Qarawiyyin"
     },
     {
-      "question": "What is the largest island in the world?",
-      "options": ["Greenland", "Australia", "Madagascar", "Iceland"],
-      "answer": "Greenland",
-      "hint": "Covered with ice"
+      "question": "Who discovered Archimedes’ principle?",
+      "options": ["Archimedes", "Pythagoras", "Euclid", "Socrates"],
+      "answer": "Archimedes"
     },
     {
-      "question": "Who was the first man in space?",
-      "options": ["Armstrong", "Gagarin", "Collins", "Aldrin"],
-      "answer": "Gagarin",
-      "hint": "Soviet astronaut"
+      "question": "Which is the largest country in the world by area?",
+      "options": ["China", "Canada", "Russia", "USA"],
+      "answer": "Russia"
     },
     {
-      "question": "Which continent has the most countries?",
-      "options": ["Europe", "Africa", "Asia", "South America"],
-      "answer": "Africa",
-      "hint": "More than 50 countries"
+      "question": "What is the most spoken language in the world?",
+      "options": ["English", "Arabic", "Chinese", "Spanish"],
+      "answer": "Chinese"
     },
     {
-      "question": "What is the longest bone in the human body?",
-      "options": ["Skull", "Femur", "Humerus", "Spine"],
-      "answer": "Femur",
-      "hint": "In the thigh"
+      "question": "How many minutes are there in 3 hours?",
+      "options": ["120", "150", "180", "200"],
+      "answer": "180"
     },
     {
-      "question": "What is the freezing point of water in Fahrenheit?",
-      "options": ["0", "32", "100", "212"],
-      "answer": "32",
-      "hint": "Different from Celsius"
+      "question": "Where is Mount Everest located?",
+      "options": ["India", "Nepal", "China", "Pakistan"],
+      "answer": "Nepal"
     },
     {
-      "question": "Which gas do humans exhale?",
-      "options": ["Oxygen", "Carbon dioxide", "Nitrogen", "Helium"],
-      "answer": "Carbon dioxide",
-      "hint": "Used by plants"
+      "question": "Which animal is called the 'Ship of the Desert'?",
+      "options": ["Horse", "Camel", "Zebra", "Giraffe"],
+      "answer": "Camel"
     }
   ]
     }
