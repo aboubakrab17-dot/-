@@ -1,107 +1,96 @@
 import streamlit as st
 import openai
-import os
+import base64
 import requests
 
-# استدعاء مفتاح OpenAI من المتغيرات البيئية
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# 📌 مفتاح API من secrets
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# إعدادات الصفحة
-st.set_page_config(
-    page_title="مولد الصور بالذكاء الاصطناعي",
-    page_icon="🎨",
-    layout="centered"
-)
+# 🎨 CSS الخلفية + ستايل النصوص والأزرار
+page_bg = """
+<style>
+body {
+  background-image: url("https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80");
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  color: #ffffff;
+  font-family: 'Cairo', sans-serif;
+}
 
-# CSS مخصص للخلفية والأزرار
-st.markdown(
-    """
-    <style>
-    body {
-        background: linear-gradient(135deg, #f9f9f9, #e3f2fd);
-        font-family: "Tajawal", sans-serif;
-    }
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        border-radius: 12px;
-        padding: 10px 24px;
-        font-size: 18px;
-        font-weight: bold;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #45a049;
-        transform: scale(1.05);
-    }
-    .big-title {
-        font-size: 32px;
-        font-weight: bold;
-        text-align: center;
-        color: #ff5722;
-    }
-    .subtitle {
-        font-size: 18px;
-        text-align: center;
-        color: #444;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+.block-container {
+  background-color: rgba(0, 0, 0, 0.75);
+  padding: 2rem;
+  border-radius: 15px;
+}
 
-# الصفحة الرئيسية
-st.markdown('<p class="big-title">🚀 مرحباً بك!</p>', unsafe_allow_html=True)
-st.markdown(
-    '<p class="subtitle">هذه الأداة تتيح لك توليد صور مذهلة بالذكاء الاصطناعي انطلاقاً من أي وصف تكتبه. 🖼️</p>',
-    unsafe_allow_html=True
-)
+h1, h2, h3, label, p {
+  color: #f9f9f9 !important;
+  font-weight: bold;
+}
 
-if "page" not in st.session_state:
-    st.session_state.page = "home"
+.stButton button {
+  background: linear-gradient(135deg, #ff7e5f, #feb47b);
+  color: white !important;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  transition: 0.3s;
+}
 
-if st.session_state.page == "home":
-    if st.button("ابدأ الآن 🚀"):
-        st.session_state.page = "generator"
-        st.experimental_rerun()
+.stButton button:hover {
+  background: linear-gradient(135deg, #ff512f, #dd2476);
+  transform: scale(1.05);
+}
 
-elif st.session_state.page == "generator":
-    # خلفية جديدة للصفحة الثانية
-    st.markdown(
-        """
-        <style>
-        body {
-            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+a {
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: bold;
+  color: #00ffcc !important;
+}
+</style>
+"""
+st.markdown(page_bg, unsafe_allow_html=True)
 
-    st.header("✍️ اكتب وصفك للصورة")
-    user_prompt = st.text_area("أدخل وصفك هنا:", placeholder="مثال: قطة تجري وسط حقل من الزهور 🌸")
+# 🚀 إعداد الصفحة
+st.set_page_config(page_title="مولد الصور بالذكاء الاصطناعي", page_icon="🎨", layout="centered")
 
-    if st.button("إنشاء الصورة 🎨"):
-        if not user_prompt.strip():
-            st.error("⚠️ من فضلك أدخل وصفاً أولاً")
-        else:
-            try:
-                with st.spinner("⏳ جاري إنشاء الصورة..."):
-                    response = openai.images.generate(
-                        model="gpt-image-1",
-                        prompt=user_prompt,
-                        size="512x512"
-                    )
-                    image_url = response.data[0].url
-                    st.image(image_url, caption="✅ تم إنشاء الصورة بنجاح")
+# 🖼️ العنوان
+st.title("🎨 مولد الصور بالذكاء الاصطناعي ✨")
+st.write("اكتب وصفاً للصورة لي حاب يترسم، وخلي الذكاء الاصطناعي يبدعلك 👇")
 
-                    # جلب الصورة للتحميل
-                    img_data = requests.get(image_url).content
-                    st.download_button(
-                        label="⬇️ تحميل الصورة",
-                        data=img_data,
-                        file_name="generated_image.png",
-                        mime="image/png"
-                    )
-            except Exception as e:
-                st.error(f"حدث خطأ: {e}")
+# 📌 إدخال النص
+prompt = st.text_area("✍️ اكتب وصف الصورة:", "")
+
+# 📐 اختيار حجم الصورة
+size = st.radio("📏 اختر حجم الصورة:", ("256x256", "512x512", "1024x1024"), index=1)
+
+# 🎨 زر توليد الصورة
+if st.button("🚀 إنشاء الصورة"):
+    if not prompt.strip():
+        st.error("⚠️ من فضلك اكتب وصف قبل التوليد.")
+    else:
+        try:
+            with st.spinner("⏳ جاري توليد الصورة..."):
+                response = openai.images.generate(
+                    model="gpt-image-1",
+                    prompt=prompt,
+                    size=size
+                )
+                image_url = response.data[0].url
+
+                # 📸 عرض الصورة
+                st.image(image_url, caption="✅ النتيجة", use_column_width=True)
+
+                # 📥 زر تحميل الصورة
+                img_data = requests.get(image_url).content
+                b64 = base64.b64encode(img_data).decode()
+                href = f'<a href="data:file/png;base64,{b64}" download="generated.png">📥 تحميل الصورة</a>'
+                st.markdown(href, unsafe_allow_html=True)
+
+                st.success("🎉 تم إنشاء الصورة بنجاح!")
+        except Exception as e:
+            st.error(f"❌ خطأ: {e}")
