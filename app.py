@@ -1,74 +1,56 @@
-import os
-import requests
 import streamlit as st
+import requests
+from io import BytesIO
+from PIL import Image
+import os
 
-# نجيبو الـ Token من Secrets
-API_TOKEN = os.getenv("API_TOKEN")
-headers = {"Authorization": f"Bearer {API_TOKEN}"}
+# نجيب التوكن من Secrets
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-# إعدادات الصفحة
-st.set_page_config(page_title="🎨 مولد الصور", page_icon="🖼️", layout="centered")
+# نموذج توليد الصور
+MODEL_ID = "runwayml/stable-diffusion-v1-5"
+API_URL = f"https://api-inference.huggingface.co/models/{MODEL_ID}"
+HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"}
 
-# 🌌 خلفية ثابتة
-page_bg = """
-<style>
-.stApp {
-    background-image: url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e");
-    background-size: cover;
-    background-attachment: fixed;
-    color: white;
-    text-align: center;
-}
-h1, h2, h3, h4 {
-    color: #FFD700;
-}
-.stButton>button {
-    font-size: 18px;
-    border-radius: 10px;
-    padding: 10px 20px;
-    font-weight: bold;
-}
-.stButton>button:hover {
-    background-color: #ff9800;
-    color: white;
-}
-</style>
-"""
-st.markdown(page_bg, unsafe_allow_html=True)
+def generate_image(prompt, size):
+    payload = {"inputs": prompt}
+    response = requests.post(API_URL, headers=HEADERS, json=payload)
 
-# 🖼️ العنوان
-st.title("🎨 مولد الصور بالذكاء الاصطناعي")
-st.subheader("✨ اكتب وصف بسيط، وشوف الذكاء الاصطناعي يصنعلك صورة مذهلة ✨")
-
-# 📝 إدخال وصف الصورة
-prompt = st.text_area("✍️ اكتب وصف الصورة هنا:")
-
-# 📐 اختيار الحجم
-size = st.radio("📐 اختر حجم الصورة:", ["256x256", "512x512", "1024x1024"], index=1)
-
-# 🚀 زر توليد
-if st.button("🚀 توليد الصورة"):
-    if not prompt.strip():
-        st.warning("⚠️ لازم تكتب وصف قبل ما تولّد الصورة.")
+    if response.status_code == 200:
+        image = Image.open(BytesIO(response.content))
+        image = image.resize(size)
+        return image
     else:
-        with st.spinner("⏳ جاري توليد الصورة... استنى لحظة"):
-            response = requests.post(
-                "https://api-inference.huggingface.co/models/ZB-Tech/Text-to-Image",
-                headers=headers,
-                json={"inputs": prompt, "parameters": {"size": size}},
-            )
+        st.error(f"❌ خطأ: {response.status_code} - {response.text}")
+        return None
 
-            if response.status_code == 200:
-                image_bytes = response.content
-                st.image(image_bytes, caption="✅ صورتك الجاهزة", use_column_width=True)
+# واجهة Streamlit
+st.set_page_config(page_title="مولد الصور بالذكاء الاصطناعي", page_icon="✨", layout="centered")
 
-                # زر تحميل بلون أزرق
-                st.download_button(
-                    "⬇️ تحميل الصورة",
-                    data=image_bytes,
-                    file_name="generated.png",
-                    mime="image/png",
-                )
-                st.success("🎉 تمت العملية بنجاح! استمتع بالصورة 🌟")
-            else:
-                st.error(f"❌ خطأ أثناء التوليد: {response.text}")
+st.markdown(
+    "<h2 style='text-align: center;'>✨ اكتب وصف بسيط و شوف الذكاء الاصطناعي يصنعلك صورة ✨</h2>",
+    unsafe_allow_html=True,
+)
+
+prompt = st.text_area("✍️ اكتب وصف الصورة هنا:", placeholder="مثال: رجل يجري على الشاطئ")
+
+size = st.radio(
+    "📐 اختر حجم الصورة",
+    ["256x256", "512x512", "1024x1024"],
+    index=1
+)
+
+sizes_map = {
+    "256x256": (256, 256),
+    "512x512": (512, 512),
+    "1024x1024": (1024, 1024),
+}
+
+if st.button("🚀 توليد الصورة"):
+    if prompt.strip() == "":
+        st.warning("⚠️ لازم تكتب وصف باش نقدر نولد صورة.")
+    else:
+        with st.spinner("⏳ توليد الصورة جارٍ..."):
+            result = generate_image(prompt, sizes_map[size])
+            if result:
+                st.image(result, caption="✅ صورتك الجاهزة", use_column_width=True)
