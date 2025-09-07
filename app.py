@@ -1,376 +1,390 @@
+# --------------------------- app.py (FULL) ---------------------------
 import streamlit as st
-import json, random, time
+import json
+import random
+import time
+from typing import List, Dict, Any
 
-# -------------------- إعدادات عامة للصفحة --------------------
-st.set_page_config(page_title="لعبة الألغاز | Quiz Master", layout="wide")
+# ====================== إعدادات عامة للصفحة + ستايل ======================
+st.set_page_config(page_title="🎮 لعبة الألغاز", page_icon="🧠", layout="wide")
 
-# -------------------- CSS: خلفية، أزرار، عناصر --------------------
-APP_CSS = """
+# خلفية (صورة ألعاب) + تصحيح شفافية البلوكات البيضاء
+GAME_BG_URL = "https://images.unsplash.com/photo-1605901309584-818e25960a8b?q=80&w=1600&auto=format&fit=crop"
+DARK_GLASS = """
 <style>
-/* خلفية */
+/* خلفية الصفحة */
 [data-testid="stAppViewContainer"]{
-  background-image:url("https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1920&auto=format&fit=crop");
-  background-size:cover; background-position:center; background-attachment:fixed;
+  background: url('""" + GAME_BG_URL + """') no-repeat center center fixed;
+  background-size: cover;
 }
-/* صندوق المحتوى */
+
+/* طبقة شفافة داكنة */
 .block-container{
-  background:rgba(0,0,0,0.55); border-radius:20px; padding:24px; color:#fff;
+  backdrop-filter: blur(3px);
+  background: rgba(0,0,0,0.25) !important;
+  border-radius: 16px;
+  padding: 1.2rem 1.5rem;
 }
-/* العناوين */
-h1,h2,h3,h4{ color:#fff !important; }
-/* الأزرار */
+
+/* نص أبيض واضح */
+h1,h2,h3,h4,h5,h6, p, label, span, div{
+  color: #f7f7fb !important;
+}
+
+/* أزرار */
 .stButton>button{
-  background:#222; color:#fff; border-radius:12px; padding:10px 18px; border:1px solid #444;
+  border-radius: 12px;
+  padding: 0.6rem 1rem;
+  font-weight: 700;
 }
-.stButton>button:hover{ background:#3a3a3a; }
-/* الراديو */
-.stRadio>div{ background:rgba(0,0,0,0.4); padding:10px 14px; border-radius:12px; }
-/* المتركس */
-[data-testid="stMetricValue"]{ color:#fff; }
-/* التلميح */
-.alert-hint{
-  background:rgba(255,255,255,0.08); border:1px dashed #7dd3fc; padding:10px 14px; border-radius:12px;
+
+/* راديو خيارات */
+div[role="radiogroup"] > label {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  margin: 0.25rem 0;
 }
-/* فواصل جميلة */
-.hr{ height:1px; background:linear-gradient(90deg,transparent,#999,transparent); margin:10px 0 18px; }
-.badge{ display:inline-block; background:#0ea5e9; color:white; padding:3px 8px; border-radius:999px; font-size:12px; }
-.counter{ font-weight:700; }
-.timer {
-  font-size:18px; font-weight:700; color:#facc15;
+
+/* إشعارات */
+.stAlert{
+  background: rgba(0,0,0,0.45) !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
 }
-.options-grid { display:grid; grid-template-columns: 1fr; gap:10px; }
-@media(min-width:768px){ .options-grid{ grid-template-columns: 1fr 1fr; } }
-.opt-btn{
-  width:100%; border:1px solid #555; background:#111; color:#fff; border-radius:12px; padding:12px 14px;
-}
-.opt-btn:hover{ background:#1f2937; border-color:#777; }
-.correct{ background:#065f46 !important; border-color:#10b981 !important; }
-.wrong{ background:#7f1d1d !important; border-color:#ef4444 !important; }
-.footer-note{ color:#e5e7eb; font-size:12px; opacity:.85; }
-.lang-chip{ background:#111; border:1px solid #444; border-radius:999px; padding:6px 10px; color:#fff; }
 </style>
 """
-st.markdown(APP_CSS, unsafe_allow_html=True)
+st.markdown(DARK_GLASS, unsafe_allow_html=True)
 
-# -------------------- نصوص واجهة باللغتين --------------------
-UI = {
-    "ar": {
-        "title": "🧩 لعبة الألغاز - إصدار محترف",
-        "start": "▶️ ابدأ اللعبة",
-        "next": "➡️ سؤال آخر",
-        "confirm": "✅ تأكيد الإجابة",
-        "hint": "💡 تلميح",
-        "score": "النقاط",
-        "streak": "السلسلة",
-        "time_left": "الوقت المتبقي",
-        "time_up": "⏰ انتهى الوقت!",
-        "game_over": "🎉 انتهت اللعبة! نتيجتك",
-        "choose": "اختر الإجابة:",
-        "right": "🎯 صحيح!",
-        "wrong": "❌ خطأ! الجواب الصحيح:",
-        "settings": "⚙️ إعدادات",
-        "lang": "اللغة",
-        "lang_ar": "العربية",
-        "lang_en": "English",
-        "count": "عدد الأسئلة",
-        "per_q_sec": "⏳ وقت لكل سؤال (ثواني)",
-        "sound": "🔊 المؤثرات الصوتية",
-        "mix": "ترتيب عشوائي للأسئلة",
-        "name": "👤 اسم اللاعب (اختياري)",
-        "hint_used": "تم استعمال التلميح",
-        "no_more": "لا توجد أسئلة أخرى.",
-        "restart": "🔄 إعادة اللعب",
-        "leader": "🏆 لوحة المتصدرين (محلية)",
-        "your_name": "اسمك",
-        "save_score": "💾 حفظ نتيجتي",
-        "saved": "✅ تم حفظ نتيجتك محليًا.",
-        "total": "المجموع",
-        "sec": "ثانية",
-        "question": "سؤال"
-    },
-    "en": {
-        "title": "🧩 Pro Quiz Game",
-        "start": "▶️ Start Game",
-        "next": "➡️ Next Question",
-        "confirm": "✅ Confirm",
-        "hint": "💡 Hint",
-        "score": "Score",
-        "streak": "Streak",
-        "time_left": "Time left",
-        "time_up": "⏰ Time is up!",
-        "game_over": "🎉 Game Over! Your score",
-        "choose": "Choose an answer:",
-        "right": "🎯 Correct!",
-        "wrong": "❌ Wrong! Correct answer:",
-        "settings": "⚙️ Settings",
-        "lang": "Language",
-        "lang_ar": "العربية",
-        "lang_en": "English",
-        "count": "Number of questions",
-        "per_q_sec": "⏳ Time per question (sec)",
-        "sound": "🔊 Sound effects",
-        "mix": "Shuffle questions",
-        "name": "👤 Player name (optional)",
-        "hint_used": "Hint used",
-        "no_more": "No more questions.",
-        "restart": "🔄 Restart",
-        "leader": "🏆 Leaderboard (Local)",
-        "your_name": "Your name",
-        "save_score": "💾 Save my score",
-        "saved": "✅ Your score is saved locally.",
-        "total": "Total",
-        "sec": "sec",
-        "question": "Question"
-    }
-}
+# ====================== وظائف مساعدة ======================
+def safe_load_questions(path: str = "questions.json") -> Dict[str, List[Dict[str, Any]]]:
+    """
+    يحمّل ملف الأسئلة ويتأكد من البنية الصحيحة.
+    يرجع {"ar": [...], "en":[...]} حتى لو فشل (بس قوائم فارغة) مع رسالة خطأ واضحة.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            st.error("❌ ملف questions.json يجب أن يحتوي مفاتيح لغات (ar, en).")
+            return {"ar": [], "en": []}
+        # تأكيد وجود المفاتيح
+        ar = data.get("ar", [])
+        en = data.get("en", [])
+        if not isinstance(ar, list) or not isinstance(en, list):
+            st.error("❌ مفاتيح ar/en يجب أن تكون قوائم أسئلة.")
+            return {"ar": [], "en": []}
+        # تنظيف كل سؤال والتأكد من الحقول
+        def normalize(lst: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            norm = []
+            for q in lst:
+                if not isinstance(q, dict):
+                    continue
+                question = str(q.get("question", "")).strip()
+                options = q.get("options", [])
+                answer = str(q.get("answer", "")).strip()
+                hint = str(q.get("hint", "")).strip() if q.get("hint") else ""
+                if question and isinstance(options, list) and len(options) >= 2 and answer:
+                    if answer not in options:
+                        # إذا الإجابة الصح مش في الخيارات نضيفها ونخلط
+                        options = list(dict.fromkeys(options + [answer]))
+                    norm.append({
+                        "question": question,
+                        "options": options,
+                        "answer": answer,
+                        "hint": hint
+                    })
+            return norm
+        return {"ar": normalize(ar), "en": normalize(en)}
+    except FileNotFoundError:
+        st.error("❌ لم يتم العثور على questions.json. ضع الملف بجانب app.py.")
+        return {"ar": [], "en": []}
+    except json.JSONDecodeError as e:
+        st.error(f"❌ خطأ JSON في questions.json: {e}")
+        return {"ar": [], "en": []}
+    except Exception as e:
+        st.error(f"⚠️ خطأ غير متوقع أثناء تحميل الأسئلة: {e}")
+        return {"ar": [], "en": []}
 
-# -------------------- حالة الجلسة --------------------
 def init_state():
+    """تهيئة كل مفاتيح الحالة مرة واحدة."""
     defaults = {
-        "lang": "ar",
-        "questions": [],
-        "order": [],
-        "idx": 0,
-        "score": 0,
-        "streak": 0,
-        "show_hint": False,
-        "selected": None,
-        "answered": False,
-        "deadline": None,
-        "per_q_sec": 20,
-        "count": 10,
-        "sound": True,
-        "shuffle": True,
-        "player": "",
-        "leaderboard": []
+        "screen": "menu",           # menu | game | result
+        "lang": "ar",               # ar | en
+        "num_questions": 10,        # عدد الأسئلة
+        "time_per_q": 20,           # بالثواني لكل سؤال
+        "questions": [],            # قائمة الأسئلة بعد الخلط والقص
+        "q_index": 0,               # رقم السؤال الحالي
+        "score": 0,                 # النقاط
+        "start_ts": None,           # وقت بداية السؤال (ثواني)
+        "show_hint": False,         # هل التلميح ظاهر؟
+        "used_5050": set(),         # أسئلة استُعمل فيها 50/50
+        "removed_opts": {},         # map: q_index -> set(options removed)
+        "skipped": set(),           # أسئلة تم تخطيها
+        "answered": set(),          # أسئلة جاوبها
+        "progress": 0,              # نسبة التقدم
+        "DATA": {"ar": [], "en": []}
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
-init_state()
-T = UI[st.session_state["lang"]]
-
-# -------------------- تحميل الأسئلة --------------------
-@st.cache_data(show_spinner=False)
-def load_questions():
-    with open("questions.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-    # يرجّع dict فيه قائمتين en/ar
-    return data
-
-DATA = load_questions()
-
-def get_lang_key(base, lang):
-    # يبني مفتاح السؤال حسب اللغة
-    return f"{base}_{lang}"
-
-def build_pool(lang):
-    pool = []
-    for q in DATA[lang]:
-        pool.append(q)
-    return pool
-
-# تهيئة الأسئلة حسب الإعدادات
-def prepare_game():
-    st.session_state["questions"] = build_pool(st.session_state["lang"])
-    if st.session_state["shuffle"]:
-        random.shuffle(st.session_state["questions"])
-    st.session_state["order"] = list(range(min(st.session_state["count"], len(st.session_state["questions"]))))
-    st.session_state["idx"] = 0
+def reset_game():
+    """إرجاع اللعبة للإعدادات الأولية مع إعادة اختيار الأسئلة."""
+    DATA = st.session_state["DATA"]
+    lang = st.session_state["lang"]
+    all_q = DATA.get(lang, [])
+    if not all_q:
+        st.error("لا توجد أسئلة لهذه اللغة.")
+        return
+    # نخلط ونقص على قد المطلوب
+    pool = all_q[:]
+    random.shuffle(pool)
+    count = max(1, min(st.session_state["num_questions"], len(pool)))
+    st.session_state["questions"] = pool[:count]
+    st.session_state["q_index"] = 0
     st.session_state["score"] = 0
-    st.session_state["streak"] = 0
+    st.session_state["start_ts"] = time.time()
     st.session_state["show_hint"] = False
-    st.session_state["selected"] = None
-    st.session_state["answered"] = False
-    st.session_state["deadline"] = None
+    st.session_state["used_5050"] = set()
+    st.session_state["removed_opts"] = {}
+    st.session_state["skipped"] = set()
+    st.session_state["answered"] = set()
+    st.session_state["progress"] = 0
+    st.session_state["screen"] = "game"
 
-# -------------------- مؤثرات صوتية --------------------
-SND_CORRECT = "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
-SND_WRONG   = "https://actions.google.com/sounds/v1/cartoon/boing.ogg"
+def get_current_question() -> Dict[str, Any]:
+    """يرجع السؤال الحالي بأمان."""
+    idx = st.session_state["q_index"]
+    qs = st.session_state["questions"]
+    if 0 <= idx < len(qs):
+        return qs[idx]
+    return {}
 
-def play_sound(url):
-    if st.session_state["sound"]:
-        st.audio(url)
+def seconds_left() -> int:
+    """الوقت المتبقي للسؤال الحالي."""
+    per_q = st.session_state["time_per_q"]
+    start = st.session_state["start_ts"]
+    if not start:
+        return per_q
+    elapsed = int(time.time() - start)
+    left = max(0, per_q - elapsed)
+    return left
 
-# -------------------- رأس الصفحة --------------------
-left, mid, right = st.columns([1,2,1])
-with left:
-    if st.button("🇸🇦" if st.session_state["lang"] == "en" else "🇬🇧"):
-        st.session_state["lang"] = "ar" if st.session_state["lang"] == "en" else "en"
-        T = UI[st.session_state["lang"]]
-        prepare_game()
-with mid:
-    st.markdown(f"<h1 style='text-align:center'>{T['title']}</h1>", unsafe_allow_html=True)
-with right:
-    st.markdown(f"<div class='badge'>{T['lang']}: {T['lang_ar'] if st.session_state['lang']=='ar' else T['lang_en']}</div>", unsafe_allow_html=True)
+def next_question(auto=False):
+    """الانتقال للسؤال التالي، وتحديث التقدم والوقت."""
+    total = len(st.session_state["questions"])
+    st.session_state["q_index"] += 1
+    st.session_state["show_hint"] = False
+    st.session_state["start_ts"] = time.time()
+    st.session_state["progress"] = int((st.session_state["q_index"] / max(1, total)) * 100)
+    if st.session_state["q_index"] >= total:
+        st.session_state["screen"] = "result"
+        if not auto:
+            st.balloons()
 
-st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
+def apply_5050(q_idx: int, question: Dict[str, Any]) -> List[str]:
+    """
+    50/50: يحذف خيارين خاطئين.
+    يُخزّن المحذوف في removed_opts لكي يبقوا مخفيين عند إعادة الرسم.
+    """
+    options = question["options"][:]
+    answer = question["answer"]
+    wrongs = [o for o in options if o != answer]
+    random.shuffle(wrongs)
+    to_remove = set(wrongs[:max(1, len(options)//2 - 1)])  # حذف نصف الخاطئ تقريبا
+    removed_map = st.session_state["removed_opts"]
+    removed_map[q_idx] = to_remove
+    st.session_state["removed_opts"] = removed_map
+    st.session_state["used_5050"].add(q_idx)
+    # نرجّع قائمة الخيارات المسموحة بعد الحذف
+    return [o for o in options if o not in to_remove]
 
-# -------------------- الشريط الجانبي: إعدادات + لوحة متصدرين --------------------
-with st.sidebar:
-    st.subheader(T["settings"])
-    st.session_state["player"] = st.text_input(T["name"], value=st.session_state["player"])
-    st.session_state["count"] = st.slider(T["count"], 5, 50, st.session_state["count"])
-    st.session_state["per_q_sec"] = st.slider(T["per_q_sec"], 5, 90, st.session_state["per_q_sec"])
-    st.session_state["sound"] = st.checkbox(T["sound"], value=st.session_state["sound"])
-    st.session_state["shuffle"] = st.checkbox(T["mix"], value=st.session_state["shuffle"])
+# ====================== تحميل الأسئلة ======================
+init_state()
+if not st.session_state["DATA"]["ar"] and not st.session_state["DATA"]["en"]:
+    st.session_state["DATA"] = safe_load_questions()
 
-    st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
-    st.subheader(T["leader"])
-    name_to_save = st.text_input(T["your_name"], key="lb_name")
-    if st.button(T["save_score"]):
-        if name_to_save.strip():
-            st.session_state["leaderboard"].append(
-                {"name": name_to_save.strip(), "score": st.session_state["score"], "total": len(st.session_state["order"])}
-            )
-            st.success(T["saved"])
-        else:
-            st.warning("⚠️ أدخل اسمًا صالحًا" if st.session_state["lang"]=="ar" else "⚠️ Enter a valid name")
-    # عرض أبسط لوحة
-    if st.session_state["leaderboard"]:
-        st.table(st.session_state["leaderboard"])
+# ====================== واجهة: القائمة الرئيسية ======================
+def render_menu():
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown("## 🧠 لعبة الألغاز والأسئلة")
+        st.write("إختبر معلوماتك وتحدَّ نفسك! اختر اللغة، عدد الأسئلة ومدة كل سؤال.")
+    with col2:
+        st.selectbox("🌐 Language / اللغة",
+                     options=[("ar", "العربية"), ("en", "English")],
+                     index=0,
+                     format_func=lambda x: x[1],
+                     key="lang")
+        st.slider("🔢 عدد الأسئلة", min_value=5, max_value=30, value=10, step=1, key="num_questions")
+        st.slider("⏳ مدة كل سؤال (ثانية)", min_value=10, max_value=60, value=20, step=5, key="time_per_q")
 
-st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
+    DATA = st.session_state["DATA"]
+    lang = st.session_state["lang"]
+    avail = len(DATA.get(lang, []))
+    st.info(f"الأسئلة المتاحة للغة المختارة: **{avail}**")
 
-# -------------------- زر بدء/إعادة --------------------
-cols = st.columns([1,1,1,1])
-with cols[0]:
-    if st.button(T["start"]):
-        prepare_game()
-        st.session_state["deadline"] = time.time() + st.session_state["per_q_sec"]
-
-with cols[1]:
-    if st.button(T["restart"]):
-        prepare_game()
-
-# -------------------- عرض النقاط + السلسلة + المؤقت --------------------
-m1, m2, m3 = st.columns(3)
-with m1:
-    st.metric(T["score"], st.session_state["score"])
-with m2:
-    st.metric(T["streak"], st.session_state["streak"])
-with m3:
-    # مؤقت حي يعتمد على موعد نهائي (deadline)
-    if st.session_state["deadline"]:
-        remaining = int(max(0, st.session_state["deadline"] - time.time()))
-        st.markdown(f"<div class='timer'>⏳ {T['time_left']}: <span class='counter'>{remaining}</span> {T['sec'] if st.session_state['lang']=='ar' else T['sec']}</div>", unsafe_allow_html=True)
-        # تحديث كل ثانية
-        st.experimental_set_query_params(t=str(int(time.time())))  # force change
-        st.autorefresh = st.experimental_rerun if remaining == 0 else None
-
-# -------------------- المنطق الرئيسي لعرض السؤال --------------------
-def get_current_question():
-    if not st.session_state["order"]:
-        return None
-    if st.session_state["idx"] >= len(st.session_state["order"]):
-        return None
-    q = st.session_state["questions"][st.session_state["order"][st.session_state["idx"]]]
-    return q
-
-q = get_current_question()
-
-if not q:
-    # نهاية اللعبة
-    st.success(f"{T['game_over']}: {st.session_state['score']} / {len(st.session_state['order'])}")
-    st.stop()
-
-# نصوص حسب اللغة
-lang = st.session_state["lang"]
-q_text   = q[f"question_{lang}"]
-opts     = q[f"options_{lang}"]
-answer   = q[f"answer_{lang}"]
-hint_txt = q[f"hint_{lang}"]
-
-# عنوان السؤال + عدّاد الأسئلة
-top_a, top_b = st.columns([3,1])
-with top_a:
-    st.subheader(f"{T['question']} {st.session_state['idx']+1}/{len(st.session_state['order'])} — {q_text}")
-with top_b:
-    st.markdown(f"<div class='badge'>{T['total']}: {len(st.session_state['order'])}</div>", unsafe_allow_html=True)
-
-st.write("")  # مسافة
-
-# شبكة خيارات (أزرار) مع تلوين بعد التأكيد
-if "answered" not in st.session_state:
-    st.session_state["answered"] = False
-
-# اختيار المستخدم
-if st.session_state["selected"] not in opts:
-    st.session_state["selected"] = None
-
-def pick(opt):
-    st.session_state["selected"] = opt
-
-# عرض الخيارات كأزرار شبكية
-st.markdown("<div class='options-grid'>", unsafe_allow_html=True)
-btn_cols = st.columns(2)
-for i, opt in enumerate(opts):
-    col = btn_cols[i % 2]
-    with col:
-        classes = "opt-btn"
-        if st.session_state["answered"]:
-            if opt == answer:
-                classes += " correct"
-            elif opt == st.session_state["selected"] and opt != answer:
-                classes += " wrong"
-        clicked = st.button(opt, key=f"opt_{st.session_state['idx']}_{i}")
-        if clicked and not st.session_state["answered"]:
-            pick(opt)
-st.markdown("</div>", unsafe_allow_html=True)
-
-# تلميح
-hcol1, hcol2, hcol3 = st.columns([1,1,1])
-with hcol1:
-    if st.button(T["hint"]):
-        st.session_state["show_hint"] = True
-with hcol2:
-    pass
-with hcol3:
-    pass
-
-if st.session_state["show_hint"]:
-    st.markdown(f"<div class='alert-hint'>💡 {hint_txt}</div>", unsafe_allow_html=True)
-
-st.write("")
-st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
-
-# تأكيد الإجابة
-cc1, cc2 = st.columns([1,1])
-with cc1:
-    if st.button(T["confirm"]):
-        if st.session_state["selected"] is None:
-            st.warning("⚠️ اختر إجابة أولاً" if lang=="ar" else "⚠️ Please select an option")
-        else:
-            st.session_state["answered"] = True
-            if st.session_state["selected"] == answer:
-                st.success(T["right"])
-                play_sound(SND_CORRECT)
-                st.session_state["score"] += 1
-                st.session_state["streak"] += 1
+    c1, c2, _ = st.columns([1,1,2])
+    with c1:
+        if st.button("▶️ ابدأ اللعبة", use_container_width=True):
+            if avail == 0:
+                st.error("لا توجد أسئلة لهذه اللغة. تأكد من ملف questions.json.")
             else:
-                st.error(f"{T['wrong']} {answer}")
-                play_sound(SND_WRONG)
-                st.session_state["streak"] = 0
+                reset_game()
+    with c2:
+        if st.button("🔄 إعادة التحميل (JSON)", use_container_width=True):
+            st.session_state["DATA"] = safe_load_questions()
+            st.success("تم تحديث الأسئلة من الملف.")
 
-with cc2:
-    if st.button(T["next"]):
-        # انتقال للسؤال التالي
-        st.session_state["idx"] += 1
-        st.session_state["show_hint"] = False
-        st.session_state["selected"] = None
-        st.session_state["answered"] = False
-        st.session_state["deadline"] = time.time() + st.session_state["per_q_sec"]
-        st.experimental_rerun()
+# ====================== واجهة: اللعب ======================
+def render_game():
+    q_idx = st.session_state["q_index"]
+    total = len(st.session_state["questions"])
+    question = get_current_question()
+    if not question:
+        st.error("لا يوجد سؤال حالي.")
+        return
 
-# إدارة انتهاء الوقت
-if st.session_state["deadline"]:
-    remaining = st.session_state["deadline"] - time.time()
-    if remaining <= 0 and not st.session_state["answered"]:
-        st.warning(T["time_up"])
-        play_sound(SND_WRONG)
-        st.session_state["streak"] = 0
-        # أظهر الإجابة الصحيحة
-        st.info((T["wrong"] + " " + answer) if lang=="ar" else (T["wrong"] + " " + answer))
-        # جهّز للسؤال التالي
-        st.session_state["answered"] = True
+    # رأس اللعبة: تقدم + نقاط + عداد يتحرك
+    top1, top2, top3 = st.columns([2,1,1])
+    with top1:
+        st.progress(st.session_state["progress"] / 100.0)
+        st.caption(f"{q_idx+1} / {total}")
+
+    with top2:
+        st.metric("⭐ النقاط", f"{st.session_state['score']}")
+
+    with top3:
+        # عداد يتحرك
+        place_timer = st.empty()
+        left = seconds_left()
+        place_timer.metric("⏱️ الوقت", f"{left}s")
+        # تحديث تلقائي بسيط للعداد
+        if left > 0:
+            # force small sleep + rerun trick
+            time.sleep(0.4)
+            st.experimental_rerun()
+        else:
+            # الوقت انتهى → تخطي تلقائي
+            st.warning("⏰ انتهى الوقت لهذا السؤال!")
+            st.session_state["skipped"].add(q_idx)
+            next_question(auto=True)
+            st.experimental_rerun()
+
+    # نص السؤال
+    st.markdown(f"### ❓ {question['question']}")
+
+    # خيارات (مع احترام 50/50 إن كانت مفعلة)
+    current_options = question["options"][:]
+    # إذا سبق طبقنا 50/50 في هذا السؤال
+    if q_idx in st.session_state["removed_opts"]:
+        removed = st.session_state["removed_opts"][q_idx]
+        current_options = [o for o in current_options if o not in removed]
+
+    # نخلط العرض فقط (لا نغيّر الأصل)
+    shuffled = current_options[:]
+    random.shuffle(shuffled)
+
+    # راديو للاختيار
+    pick_key = f"pick_{q_idx}"
+    choice = st.radio("اختر الإجابة:", shuffled, key=pick_key, index=0 if shuffled else None)
+
+    # أزرار التحكم
+    bcol1, bcol2, bcol3, bcol4 = st.columns(4)
+
+    # زر تلميح
+    with bcol1:
+        hint_label = "💡 إظهار التلميح" if not st.session_state["show_hint"] else "💡 إخفاء التلميح"
+        if st.button(hint_label, use_container_width=True):
+            st.session_state["show_hint"] = not st.session_state["show_hint"]
+
+    # زر 50/50
+    with bcol2:
+        if q_idx in st.session_state["used_5050"]:
+            st.button("🧪 50/50 (مُستخدم)", disabled=True, use_container_width=True)
+        else:
+            if st.button("🧪 50/50", use_container_width=True):
+                new_opts = apply_5050(q_idx, question)
+                st.info("تم حذف خيارين خاطئين.")
+                st.experimental_rerun()
+
+    # زر تخطي
+    with bcol3:
+        if st.button("⏭️ تخطي", use_container_width=True):
+            st.session_state["skipped"].add(q_idx)
+            next_question()
+            st.experimental_rerun()
+
+    # زر تأكيد
+    with bcol4:
+        if st.button("✅ تأكيد الإجابة", use_container_width=True):
+            correct = question["answer"]
+            if choice == correct:
+                st.success("✔️ إجابة صحيحة!")
+                st.session_state["score"] += 1
+            else:
+                st.error(f"❌ خاطئة. الإجابة الصحيحة: **{correct}**")
+            st.session_state["answered"].add(q_idx)
+            next_question()
+            st.experimental_rerun()
+
+    # عرض التلميح إن مفعّل
+    if st.session_state["show_hint"]:
+        if question.get("hint"):
+            st.info(f"💬 تلميح: {question['hint']}")
+        else:
+            st.info("💬 لا يوجد تلميح لهذا السؤال.")
+
+# ====================== واجهة: النتيجة ======================
+def render_result():
+    total = len(st.session_state["questions"])
+    score = st.session_state["score"]
+    skipped = len(st.session_state["skipped"])
+    answered = len(st.session_state["answered"])
+
+    st.markdown("## 🏁 النتيجة النهائية")
+    st.success(f"النقاط: **{score} / {total}**")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric("✅ أُجيبت", f"{answered}")
+    with c2:
+        st.metric("⏭️ مُتخطّاة", f"{skipped}")
+    with c3:
+        percent = int((score / total) * 100) if total else 0
+        st.metric("📊 نسبة النجاح", f"{percent}%")
+
+    # تقييم بسيط
+    if percent == 100:
+        st.balloons()
+        st.info("🎉 ممتاز! أداء أسطوري.")
+    elif percent >= 70:
+        st.info("💪 رائع! معلوماتك قوية.")
+    elif percent >= 40:
+        st.warning("🙂 جيد، مزيد من التدريب يفيد.")
+    else:
+        st.error("😅 تحتاج مراجعة أكثر، جرّب مرة أخرى.")
+
+    st.divider()
+    r1, r2 = st.columns(2)
+    with r1:
+        if st.button("🔁 إعادة اللعب بنفس الإعدادات", use_container_width=True):
+            reset_game()
+            st.experimental_rerun()
+    with r2:
+        if st.button("🏠 عودة للقائمة الرئيسية", use_container_width=True):
+            st.session_state["screen"] = "menu"
+            st.experimental_rerun()
+
+# ====================== التوجيه العام ======================
+screen = st.session_state["screen"]
+if screen == "menu":
+    render_menu()
+elif screen == "game":
+    render_game()
+elif screen == "result":
+    render_result()
+else:
+    st.session_state["screen"] = "menu"
+    st.experimental_rerun()
+# ------------------------ END app.py ------------------------
