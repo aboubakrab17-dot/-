@@ -1,465 +1,376 @@
-# app.py
 import streamlit as st
-import random, time, json
-from pathlib import Path
-from datetime import datetime
+import json, random, time
 
-# ------------- Page setup -------------
-st.set_page_config(page_title="Ultimate Trivia Game", page_icon="🎮", layout="centered")
+# -------------------- إعدادات عامة للصفحة --------------------
+st.set_page_config(page_title="لعبة الألغاز | Quiz Master", layout="wide")
 
-# ------------- Neon animated background + UI style -------------
-CSS = """
+# -------------------- CSS: خلفية، أزرار، عناصر --------------------
+APP_CSS = """
 <style>
-.stApp {
-  background: linear-gradient(-45deg, #1e3c72, #2a5298, #0f2027, #203a43, #2c5364);
-  background-size: 400% 400%;
-  animation: gradient 18s ease infinite;
+/* خلفية */
+[data-testid="stAppViewContainer"]{
+  background-image:url("https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1920&auto=format&fit=crop");
+  background-size:cover; background-position:center; background-attachment:fixed;
 }
-@keyframes gradient {
-  0% {background-position: 0% 50%;}
-  50% {background-position: 100% 50%;}
-  100% {background-position: 0% 50%;}
-}
+/* صندوق المحتوى */
 .block-container{
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 18px;
-  padding: 1.1rem;
+  background:rgba(0,0,0,0.55); border-radius:20px; padding:24px; color:#fff;
 }
-h1,h2,h3,h4,h5,h6,p,span,div,label { color: #fff !important; }
-.stButton>button, .stDownloadButton>button {
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.10);
-  padding: .6rem .9rem;
+/* العناوين */
+h1,h2,h3,h4{ color:#fff !important; }
+/* الأزرار */
+.stButton>button{
+  background:#222; color:#fff; border-radius:12px; padding:10px 18px; border:1px solid #444;
 }
-.stButton>button:hover, .stDownloadButton>button:hover { background: rgba(255,255,255,0.18); }
-.timer-badge {
-  display:inline-block; padding: .35rem .75rem;
-  background: rgba(0, 200, 255, .15);
-  border: 1px solid rgba(0, 200, 255, .4);
-  border-radius: 999px; font-weight: 700;
+.stButton>button:hover{ background:#3a3a3a; }
+/* الراديو */
+.stRadio>div{ background:rgba(0,0,0,0.4); padding:10px 14px; border-radius:12px; }
+/* المتركس */
+[data-testid="stMetricValue"]{ color:#fff; }
+/* التلميح */
+.alert-hint{
+  background:rgba(255,255,255,0.08); border:1px dashed #7dd3fc; padding:10px 14px; border-radius:12px;
 }
-.q-card {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 14px; padding: 1rem 1.1rem; margin-bottom: .75rem;
-  font-size: 1.05rem;
+/* فواصل جميلة */
+.hr{ height:1px; background:linear-gradient(90deg,transparent,#999,transparent); margin:10px 0 18px; }
+.badge{ display:inline-block; background:#0ea5e9; color:white; padding:3px 8px; border-radius:999px; font-size:12px; }
+.counter{ font-weight:700; }
+.timer {
+  font-size:18px; font-weight:700; color:#facc15;
 }
-.choice-btn {
-  width: 100%; text-align: left;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.08);
-  padding: 0.7rem 1rem; margin-bottom: .6rem;
+.options-grid { display:grid; grid-template-columns: 1fr; gap:10px; }
+@media(min-width:768px){ .options-grid{ grid-template-columns: 1fr 1fr; } }
+.opt-btn{
+  width:100%; border:1px solid #555; background:#111; color:#fff; border-radius:12px; padding:12px 14px;
 }
-.choice-btn:hover { background: rgba(255,255,255,0.18); }
-.small-note { opacity: .85; font-size: .92rem; }
-@media (max-width: 480px) { .block-container{ padding: .9rem; } }
+.opt-btn:hover{ background:#1f2937; border-color:#777; }
+.correct{ background:#065f46 !important; border-color:#10b981 !important; }
+.wrong{ background:#7f1d1d !important; border-color:#ef4444 !important; }
+.footer-note{ color:#e5e7eb; font-size:12px; opacity:.85; }
+.lang-chip{ background:#111; border:1px solid #444; border-radius:999px; padding:6px 10px; color:#fff; }
 </style>
 """
-st.markdown(CSS, unsafe_allow_html=True)
+st.markdown(APP_CSS, unsafe_allow_html=True)
 
-# ------------- Sounds -------------
-SND_CORRECT = "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
-SND_WRONG   = "https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"
-SND_TIMEOUT = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
-
-def play(url:str):
-    if not st.session_state.sounds_on: return
-    st.markdown(f"""<audio autoplay style="display:none"><source src="{url}"></audio>""", unsafe_allow_html=True)
-
-# ------------- Language packs -------------
-T = {
-    "en": {
-        "title": "🎮 Ultimate Trivia Game",
-        "enter_name": "✨ Enter your name to start",
-        "difficulty": "🎯 Difficulty",
-        "mix": "Mix", "easy": "easy", "medium": "medium", "hard": "hard",
-        "num_q": "🧩 Number of questions",
-        "per_q": "⏳ Time per question (sec)",
-        "global_timer": "⏱️ Global round timer",
-        "global_limit": "⌛ Round total time (sec)",
-        "sound": "🔊 Sounds",
-        "start": "🚀 Start",
-        "player": "👤 Player", "score": "🏅 Score", "streak": "🔥 Streak",
-        "time_left": "⏳ Time left",
-        "round_left": "⏱️ Round left",
-        "hint": "💡 Hint", "fifty": "🎯 50/50", "skip": "⏭️ Skip", "mute": "🔊/🔇 Toggle sound",
-        "correct": "✅ Correct! Great job 👏",
-        "wrong": "❌ Wrong! Correct answer:",
-        "no_hint": "💡 No hint for this question.",
-        "used_hint_max": "🚫 You already used 2 hints.",
-        "used_5050": "🚫 50/50 already used.",
-        "time_up": "⏰ Time is up!",
-        "finished": "🎉 Well done {name}! Round finished.",
-        "final_score": "🔢 Your final score: **{score}** of **{total}**",
-        "report": "📊 Performance report",
-        "acc": "Accuracy", "avg": "Avg time", "fastest": "Fastest", "slowest": "Slowest",
-        "by_diff": "By difficulty → Easy: **{easy}%** | Medium: **{med}%** | Hard: **{hard}%**",
-        "leaderboard": "🏆 Leaderboard (Top 10)",
-        "restart_same": "🔄 Replay — same settings",
-        "new_settings": "🧰 New settings",
-        "lang": "🌍 Language", "lang_note": "Default is English. You can switch anytime.",
-        "toggle_to_ar": "Switch to العربية",
-        "toggle_to_en": "Switch to English",
-    },
+# -------------------- نصوص واجهة باللغتين --------------------
+UI = {
     "ar": {
-        "title": "🎮 أفضل لعبة ألغاز",
-        "enter_name": "✨ اكتب اسمك للبدء",
-        "difficulty": "🎯 اختر المستوى",
-        "mix": "Mix", "easy": "easy", "medium": "medium", "hard": "hard",
-        "num_q": "🧩 عدد الأسئلة",
-        "per_q": "⏳ وقت لكل سؤال (ث)",
-        "global_timer": "⏱️ مؤقت عام للجولة",
-        "global_limit": "⌛ زمن الجولة الكلي (ث)",
-        "sound": "🔊 الصوت",
-        "start": "🚀 ابدأ",
-        "player": "👤 اللاعب", "score": "🏅 النقاط", "streak": "🔥 السلسلة",
-        "time_left": "⏳ الوقت المتبقي",
-        "round_left": "⏱️ المتبقي للجولة",
-        "hint": "💡 تلميح", "fifty": "🎯 50/50", "skip": "⏭️ تخطي", "mute": "🔊/🔇 تبديل الصوت",
-        "correct": "✅ إجابة صحيحة! ممتاز 👏",
-        "wrong": "❌ خطأ! الجواب الصحيح:",
-        "no_hint": "💡 هذا السؤال ما عندوش تلميح.",
-        "used_hint_max": "🚫 استعملت تلميحين بالفعل.",
-        "used_5050": "🚫 استعملت 50/50 من قبل.",
+        "title": "🧩 لعبة الألغاز - إصدار محترف",
+        "start": "▶️ ابدأ اللعبة",
+        "next": "➡️ سؤال آخر",
+        "confirm": "✅ تأكيد الإجابة",
+        "hint": "💡 تلميح",
+        "score": "النقاط",
+        "streak": "السلسلة",
+        "time_left": "الوقت المتبقي",
         "time_up": "⏰ انتهى الوقت!",
-        "finished": "🎉 مبروك {name}! أنهيت الجولة.",
-        "final_score": "🔢 نتيجتك النهائية: **{score}** من **{total}**",
-        "report": "📊 تقرير الأداء",
-        "acc": "الدقة", "avg": "متوسط الزمن", "fastest": "الأسرع", "slowest": "الأبطأ",
-        "by_diff": "حسب الصعوبة → سهل: **{easy}%** | متوسط: **{med}%** | صعب: **{hard}%**",
-        "leaderboard": "🏆 لوحة المتصدرين (Top 10)",
-        "restart_same": "🔄 إعادة اللعب — نفس الإعدادات",
-        "new_settings": "🧰 إعدادات جديدة",
-        "lang": "🌍 اللغة", "lang_note": "الافتراضية الإنجليزية. تقدر تبدّل في أي وقت.",
-        "toggle_to_ar": "التبديل إلى العربية",
-        "toggle_to_en": "التبديل إلى English",
+        "game_over": "🎉 انتهت اللعبة! نتيجتك",
+        "choose": "اختر الإجابة:",
+        "right": "🎯 صحيح!",
+        "wrong": "❌ خطأ! الجواب الصحيح:",
+        "settings": "⚙️ إعدادات",
+        "lang": "اللغة",
+        "lang_ar": "العربية",
+        "lang_en": "English",
+        "count": "عدد الأسئلة",
+        "per_q_sec": "⏳ وقت لكل سؤال (ثواني)",
+        "sound": "🔊 المؤثرات الصوتية",
+        "mix": "ترتيب عشوائي للأسئلة",
+        "name": "👤 اسم اللاعب (اختياري)",
+        "hint_used": "تم استعمال التلميح",
+        "no_more": "لا توجد أسئلة أخرى.",
+        "restart": "🔄 إعادة اللعب",
+        "leader": "🏆 لوحة المتصدرين (محلية)",
+        "your_name": "اسمك",
+        "save_score": "💾 حفظ نتيجتي",
+        "saved": "✅ تم حفظ نتيجتك محليًا.",
+        "total": "المجموع",
+        "sec": "ثانية",
+        "question": "سؤال"
+    },
+    "en": {
+        "title": "🧩 Pro Quiz Game",
+        "start": "▶️ Start Game",
+        "next": "➡️ Next Question",
+        "confirm": "✅ Confirm",
+        "hint": "💡 Hint",
+        "score": "Score",
+        "streak": "Streak",
+        "time_left": "Time left",
+        "time_up": "⏰ Time is up!",
+        "game_over": "🎉 Game Over! Your score",
+        "choose": "Choose an answer:",
+        "right": "🎯 Correct!",
+        "wrong": "❌ Wrong! Correct answer:",
+        "settings": "⚙️ Settings",
+        "lang": "Language",
+        "lang_ar": "العربية",
+        "lang_en": "English",
+        "count": "Number of questions",
+        "per_q_sec": "⏳ Time per question (sec)",
+        "sound": "🔊 Sound effects",
+        "mix": "Shuffle questions",
+        "name": "👤 Player name (optional)",
+        "hint_used": "Hint used",
+        "no_more": "No more questions.",
+        "restart": "🔄 Restart",
+        "leader": "🏆 Leaderboard (Local)",
+        "your_name": "Your name",
+        "save_score": "💾 Save my score",
+        "saved": "✅ Your score is saved locally.",
+        "total": "Total",
+        "sec": "sec",
+        "question": "Question"
     }
 }
 
-# ------------- Load questions (external or default) -------------
-DEFAULT_EN = [
-    {"question":"What color is the sky on a clear day?","options":["Red","Blue","Green","Black"],"answer":"Blue","difficulty":"easy","hint":"Rayleigh scattering!"},
-    {"question":"How many legs does a spider have?","options":["6","8","10","12"],"answer":"8","difficulty":"easy","hint":"More than an insect."},
-    {"question":"Capital of Algeria?","options":["Oran","Algiers","Constantine","Setif"],"answer":"Algiers","difficulty":"easy"},
-    {"question":"How many sides does a triangle have?","options":["2","3","4","5"],"answer":"3","difficulty":"easy"},
-    {"question":"Closest planet to the Sun?","options":["Jupiter","Earth","Mercury","Venus"],"answer":"Mercury","difficulty":"easy"},
-    {"question":"Which is the Red Planet?","options":["Venus","Mars","Jupiter","Saturn"],"answer":"Mars","difficulty":"medium"},
-    {"question":"How many continents are there?","options":["5","6","7","8"],"answer":"7","difficulty":"medium"},
-    {"question":"Where is the Eiffel Tower?","options":["Rome","Paris","London","Madrid"],"answer":"Paris","difficulty":"medium"},
-    {"question":"Unit of electrical power?","options":["Volt","Ohm","Watt","Ampere"],"answer":"Watt","difficulty":"medium","hint":"P = V × I"},
-    {"question":"Largest ocean?","options":["Atlantic","Indian","Arctic","Pacific"],"answer":"Pacific","difficulty":"medium"},
-    {"question":"Year of Algerian Revolution?","options":["1952","1954","1962","1945"],"answer":"1954","difficulty":"hard"},
-    {"question":"Fastest land animal?","options":["Gazelle","Cheetah","Lion","Tiger"],"answer":"Cheetah","difficulty":"hard"},
-    {"question":"Element with symbol Fe?","options":["Gold","Copper","Iron","Zinc"],"answer":"Iron","difficulty":"hard"},
-    {"question":"Heaviest planet?","options":["Jupiter","Saturn","Neptune","Earth"],"answer":"Jupiter","difficulty":"hard"},
-    {"question":"Largest desert?","options":["Sahara","Gobi","Kalahari","Australia"],"answer":"Sahara","difficulty":"hard"},
-]
-DEFAULT_AR = [
-    {"question":"ما لون السماء في يوم صافٍ؟","options":["أحمر","أزرق","أخضر","أسود"],"answer":"أزرق","difficulty":"easy","hint":"تشتّت رايلي."},
-    {"question":"كم عدد أرجل العنكبوت؟","options":["6","8","10","12"],"answer":"8","difficulty":"easy","hint":"أكثر من الحشرة."},
-    {"question":"ما عاصمة الجزائر؟","options":["وهران","الجزائر العاصمة","قسنطينة","سطيف"],"answer":"الجزائر العاصمة","difficulty":"easy"},
-    {"question":"كم أضلاع المثلث؟","options":["2","3","4","5"],"answer":"3","difficulty":"easy"},
-    {"question":"أقرب كوكب للشمس؟","options":["المشتري","الأرض","عطارد","الزهرة"],"answer":"عطارد","difficulty":"easy"},
-    {"question":"ما هو الكوكب الأحمر؟","options":["الزهرة","المريخ","المشتري","زحل"],"answer":"المريخ","difficulty":"medium"},
-    {"question":"كم عدد قارات العالم؟","options":["5","6","7","8"],"answer":"7","difficulty":"medium"},
-    {"question":"أين يقع برج إيفل؟","options":["روما","باريس","لندن","مدريد"],"answer":"باريس","difficulty":"medium"},
-    {"question":"وحدة قياس القدرة؟","options":["فولت","أوم","واط","أمبير"],"answer":"واط","difficulty":"medium","hint":"P = V × I"},
-    {"question":"أكبر محيط؟","options":["الأطلسي","الهندي","المتجمد","الهادي"],"answer":"الهادي","difficulty":"medium"},
-    {"question":"سنة اندلاع الثورة الجزائرية؟","options":["1952","1954","1962","1945"],"answer":"1954","difficulty":"hard"},
-    {"question":"أسرع حيوان بري؟","options":["الغزال","الفهد","الأسد","النمر"],"answer":"الفهد","difficulty":"hard"},
-    {"question":"العنصر Fe؟","options":["الذهب","النحاس","الحديد","الزنك"],"answer":"الحديد","difficulty":"hard"},
-    {"question":"أثقل كوكب؟","options":["المشتري","زحل","نبتون","الأرض"],"answer":"المشتري","difficulty":"hard"},
-    {"question":"أكبر صحراء؟","options":["الكبرى","غوبي","كالاهاري","أستراليا"],"answer":"الصحراء الكبرى","difficulty":"hard"},
-]
+# -------------------- حالة الجلسة --------------------
+def init_state():
+    defaults = {
+        "lang": "ar",
+        "questions": [],
+        "order": [],
+        "idx": 0,
+        "score": 0,
+        "streak": 0,
+        "show_hint": False,
+        "selected": None,
+        "answered": False,
+        "deadline": None,
+        "per_q_sec": 20,
+        "count": 10,
+        "sound": True,
+        "shuffle": True,
+        "player": "",
+        "leaderboard": []
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
-def load_bank(lang):
-    p = Path(f"questions_{lang}.json")
-    if p.exists():
-        try:
-            return json.loads(p.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return DEFAULT_EN if lang=="en" else DEFAULT_AR
+init_state()
+T = UI[st.session_state["lang"]]
 
-# ------------- Session state -------------
-ss = st.session_state
-defaults = {
-    "lang": "en",               # default English
-    "player": None,
-    "sounds_on": True,
-    "difficulty": "Mix",
-    "num_questions": 10,
-    "perq_limit": 15,
-    "global_timer_on": False,
-    "global_limit": 180,
-    "global_start": None,
-    "pool": [],
-    "idx": -1,
-    "score": 0,
-    "streak": 0,
-    "best_streak": 0,
-    "question_start": None,
-    "hidden_options": set(),
-    "used_hint": 0,
-    "used_5050": False,
-    "leaderboard": [],
-    "history": [],
-    "answer_times": []
-}
-for k,v in defaults.items():
-    if k not in ss: ss[k] = v
+# -------------------- تحميل الأسئلة --------------------
+@st.cache_data(show_spinner=False)
+def load_questions():
+    with open("questions.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+    # يرجّع dict فيه قائمتين en/ar
+    return data
 
-# ------------- Helpers -------------
-def L(key, **kw):
-    return T[ss.lang][key].format(**kw) if kw else T[ss.lang][key]
+DATA = load_questions()
 
-def time_per_diff(diff):
-    return 20 if diff=="easy" else 15 if diff=="medium" else 12 if diff=="hard" else 15
+def get_lang_key(base, lang):
+    # يبني مفتاح السؤال حسب اللغة
+    return f"{base}_{lang}"
 
-def build_pool():
-    bank = load_bank(ss.lang)
-    if ss.difficulty == "Mix":
-        pool = bank[:]
-    else:
-        pool = [q for q in bank if q.get("difficulty","easy")==ss.difficulty]
-    random.shuffle(pool)
-    n = min(ss.num_questions, len(pool))
-    ss.pool = pool[:n]
-    ss.idx = -1
+def build_pool(lang):
+    pool = []
+    for q in DATA[lang]:
+        pool.append(q)
+    return pool
 
-def next_q():
-    ss.idx += 1
-    ss.hidden_options = set()
-    ss.question_start = time.time()
+# تهيئة الأسئلة حسب الإعدادات
+def prepare_game():
+    st.session_state["questions"] = build_pool(st.session_state["lang"])
+    if st.session_state["shuffle"]:
+        random.shuffle(st.session_state["questions"])
+    st.session_state["order"] = list(range(min(st.session_state["count"], len(st.session_state["questions"]))))
+    st.session_state["idx"] = 0
+    st.session_state["score"] = 0
+    st.session_state["streak"] = 0
+    st.session_state["show_hint"] = False
+    st.session_state["selected"] = None
+    st.session_state["answered"] = False
+    st.session_state["deadline"] = None
 
-def cur_q():
-    if 0 <= ss.idx < len(ss.pool):
-        return ss.pool[ss.idx]
-    return None
+# -------------------- مؤثرات صوتية --------------------
+SND_CORRECT = "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
+SND_WRONG   = "https://actions.google.com/sounds/v1/cartoon/boing.ogg"
 
-def accuracy(items):
-    if not items: return 0.0
-    return 100.0 * sum(1 for _,ok,_ in items)/len(items)
+def play_sound(url):
+    if st.session_state["sound"]:
+        st.audio(url)
 
-def acc_for(level):
-    subset = [ok for d,ok,_ in ss.history if d==level]
-    return (100*sum(subset)/len(subset)) if subset else 0
-
-# ------------- Header (title + language toggle) -------------
+# -------------------- رأس الصفحة --------------------
 left, mid, right = st.columns([1,2,1])
-with mid: st.title(L("title"))
+with left:
+    if st.button("🇸🇦" if st.session_state["lang"] == "en" else "🇬🇧"):
+        st.session_state["lang"] = "ar" if st.session_state["lang"] == "en" else "en"
+        T = UI[st.session_state["lang"]]
+        prepare_game()
+with mid:
+    st.markdown(f"<h1 style='text-align:center'>{T['title']}</h1>", unsafe_allow_html=True)
 with right:
-    if st.button(("🇸🇦 "+L("toggle_to_ar")) if ss.lang=="en" else ("🇬🇧 "+L("toggle_to_en"))):
-        ss.lang = "ar" if ss.lang=="en" else "en"
-        st.rerun()
+    st.markdown(f"<div class='badge'>{T['lang']}: {T['lang_ar'] if st.session_state['lang']=='ar' else T['lang_en']}</div>", unsafe_allow_html=True)
 
-# ------------- Start screen -------------
-if not ss.player:
-    name = st.text_input(L("enter_name"), value="")
-    c1, c2 = st.columns(2)
-    with c1:
-        diff = st.selectbox(L("difficulty"), [L("mix"), L("easy"), L("medium"), L("hard")], index=0)
-        sounds = st.toggle(L("sound"), value=True)
-    with c2:
-        # map localized labels back to internal keys
-        rev = {L("mix"):"Mix", L("easy"):"easy", L("medium"):"medium", L("hard"):"hard"}
-        max_n = len(load_bank(ss.lang)) if rev[diff]=="Mix" else len([q for q in load_bank(ss.lang) if q.get("difficulty")==rev[diff]])
-        max_n = max(5, max_n)
-        num = st.slider(L("num_q"), 5, min(100, max_n), value=min(10, max_n))
-        perq = st.slider(L("per_q"), 8, 40, time_per_diff(rev[diff]))
+st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
 
-    g_on = st.toggle(L("global_timer"), value=False)
-    g_lim = st.slider(L("global_limit"), 60, 900, 180, disabled=not g_on)
-    st.caption(f"**{L('lang')}** — {L('lang_note')}")
+# -------------------- الشريط الجانبي: إعدادات + لوحة متصدرين --------------------
+with st.sidebar:
+    st.subheader(T["settings"])
+    st.session_state["player"] = st.text_input(T["name"], value=st.session_state["player"])
+    st.session_state["count"] = st.slider(T["count"], 5, 50, st.session_state["count"])
+    st.session_state["per_q_sec"] = st.slider(T["per_q_sec"], 5, 90, st.session_state["per_q_sec"])
+    st.session_state["sound"] = st.checkbox(T["sound"], value=st.session_state["sound"])
+    st.session_state["shuffle"] = st.checkbox(T["mix"], value=st.session_state["shuffle"])
 
-    if st.button(L("start")):
-        if name.strip():
-            ss.player = name.strip()
-            ss.sounds_on = sounds
-            ss.difficulty = rev[diff]
-            ss.num_questions = num
-            ss.perq_limit = perq
-            ss.score = 0; ss.streak = 0; ss.best_streak = 0
-            ss.history = []; ss.answer_times = []
-            ss.used_hint = 0; ss.used_5050 = False
-            build_pool(); next_q()
-            if g_on:
-                ss.global_timer_on = True
-                ss.global_limit = g_lim
-                ss.global_start = time.time()
-            else:
-                ss.global_timer_on = False
-                ss.global_start = None
-            st.rerun()
+    st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
+    st.subheader(T["leader"])
+    name_to_save = st.text_input(T["your_name"], key="lb_name")
+    if st.button(T["save_score"]):
+        if name_to_save.strip():
+            st.session_state["leaderboard"].append(
+                {"name": name_to_save.strip(), "score": st.session_state["score"], "total": len(st.session_state["order"])}
+            )
+            st.success(T["saved"])
         else:
-            st.warning("⚠️" + (" Please enter a valid name." if ss.lang=="en" else " أدخل اسم صالح."))
+            st.warning("⚠️ أدخل اسمًا صالحًا" if st.session_state["lang"]=="ar" else "⚠️ Enter a valid name")
+    # عرض أبسط لوحة
+    if st.session_state["leaderboard"]:
+        st.table(st.session_state["leaderboard"])
+
+st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
+
+# -------------------- زر بدء/إعادة --------------------
+cols = st.columns([1,1,1,1])
+with cols[0]:
+    if st.button(T["start"]):
+        prepare_game()
+        st.session_state["deadline"] = time.time() + st.session_state["per_q_sec"]
+
+with cols[1]:
+    if st.button(T["restart"]):
+        prepare_game()
+
+# -------------------- عرض النقاط + السلسلة + المؤقت --------------------
+m1, m2, m3 = st.columns(3)
+with m1:
+    st.metric(T["score"], st.session_state["score"])
+with m2:
+    st.metric(T["streak"], st.session_state["streak"])
+with m3:
+    # مؤقت حي يعتمد على موعد نهائي (deadline)
+    if st.session_state["deadline"]:
+        remaining = int(max(0, st.session_state["deadline"] - time.time()))
+        st.markdown(f"<div class='timer'>⏳ {T['time_left']}: <span class='counter'>{remaining}</span> {T['sec'] if st.session_state['lang']=='ar' else T['sec']}</div>", unsafe_allow_html=True)
+        # تحديث كل ثانية
+        st.experimental_set_query_params(t=str(int(time.time())))  # force change
+        st.autorefresh = st.experimental_rerun if remaining == 0 else None
+
+# -------------------- المنطق الرئيسي لعرض السؤال --------------------
+def get_current_question():
+    if not st.session_state["order"]:
+        return None
+    if st.session_state["idx"] >= len(st.session_state["order"]):
+        return None
+    q = st.session_state["questions"][st.session_state["order"][st.session_state["idx"]]]
+    return q
+
+q = get_current_question()
+
+if not q:
+    # نهاية اللعبة
+    st.success(f"{T['game_over']}: {st.session_state['score']} / {len(st.session_state['order'])}")
     st.stop()
 
-# ------------- Top info bar -------------
-total = len(ss.pool)
-answered = max(0, ss.idx)
-st.progress(answered/total if total else 0.0, text=f"{answered}/{total}")
+# نصوص حسب اللغة
+lang = st.session_state["lang"]
+q_text   = q[f"question_{lang}"]
+opts     = q[f"options_{lang}"]
+answer   = q[f"answer_{lang}"]
+hint_txt = q[f"hint_{lang}"]
 
-# per-question timer
-if ss.question_start:
-    elapsed_q = int(time.time() - ss.question_start)
-    remain_q = max(0, ss.perq_limit - elapsed_q)
-else:
-    remain_q = ss.perq_limit
+# عنوان السؤال + عدّاد الأسئلة
+top_a, top_b = st.columns([3,1])
+with top_a:
+    st.subheader(f"{T['question']} {st.session_state['idx']+1}/{len(st.session_state['order'])} — {q_text}")
+with top_b:
+    st.markdown(f"<div class='badge'>{T['total']}: {len(st.session_state['order'])}</div>", unsafe_allow_html=True)
 
-# global timer
-if ss.global_timer_on and ss.global_start:
-    elapsed_g = int(time.time() - ss.global_start)
-    remain_g = max(0, ss.global_limit - elapsed_g)
-else:
-    remain_g = None
+st.write("")  # مسافة
 
-top = st.container()
-with top:
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric(L("player"), ss.player)
-    c2.metric(L("score"), ss.score)
-    c3.metric(L("streak"), ss.streak)
-    badge = f"<span class='timer-badge'>{('⏱️ ' + str(remain_g) + 's') if remain_g is not None else ('⏳ ' + str(remain_q) + 's')}</span>"
-    c4.markdown(badge, unsafe_allow_html=True)
+# شبكة خيارات (أزرار) مع تلوين بعد التأكيد
+if "answered" not in st.session_state:
+    st.session_state["answered"] = False
 
-# auto refresh every second while timers running
-if cur_q() and (remain_q > 0) and (remain_g is None or remain_g > 0):
-    st.markdown("<script>setTimeout(()=>window.parent.location.reload(),1000);</script>", unsafe_allow_html=True)
+# اختيار المستخدم
+if st.session_state["selected"] not in opts:
+    st.session_state["selected"] = None
 
-# timeouts
-if cur_q() and remain_q == 0:
-    st.warning(L("time_up"))
-    play(SND_TIMEOUT)
-    q = cur_q()
-    spent = ss.perq_limit
-    ss.history.append((q.get("difficulty","easy"), False, spent))
-    ss.answer_times.append(spent)
-    ss.streak = 0
-    next_q(); st.rerun()
+def pick(opt):
+    st.session_state["selected"] = opt
 
-if cur_q() and ss.global_timer_on and remain_g == 0:
-    st.error(L("time_up"))
-    ss.idx = len(ss.pool)
-    st.rerun()
+# عرض الخيارات كأزرار شبكية
+st.markdown("<div class='options-grid'>", unsafe_allow_html=True)
+btn_cols = st.columns(2)
+for i, opt in enumerate(opts):
+    col = btn_cols[i % 2]
+    with col:
+        classes = "opt-btn"
+        if st.session_state["answered"]:
+            if opt == answer:
+                classes += " correct"
+            elif opt == st.session_state["selected"] and opt != answer:
+                classes += " wrong"
+        clicked = st.button(opt, key=f"opt_{st.session_state['idx']}_{i}")
+        if clicked and not st.session_state["answered"]:
+            pick(opt)
+st.markdown("</div>", unsafe_allow_html=True)
 
-# ------------- Question UI -------------
-q = cur_q()
-if q:
-    st.markdown(f"<div class='q-card'>❓ {q['question']}</div>", unsafe_allow_html=True)
+# تلميح
+hcol1, hcol2, hcol3 = st.columns([1,1,1])
+with hcol1:
+    if st.button(T["hint"]):
+        st.session_state["show_hint"] = True
+with hcol2:
+    pass
+with hcol3:
+    pass
 
-    visible = [o for o in q["options"] if o not in ss.hidden_options]
+if st.session_state["show_hint"]:
+    st.markdown(f"<div class='alert-hint'>💡 {hint_txt}</div>", unsafe_allow_html=True)
 
-    # render choices as buttons (no white radios)
-    for opt in visible:
-        if st.button(opt, key=f"opt_{ss.idx}_{opt}", use_container_width=True):
-            spent = int(time.time() - ss.question_start) if ss.question_start else 0
-            if opt == q["answer"]:
-                st.success(L("correct"))
-                play(SND_CORRECT)
-                pts = 1 if q.get("difficulty")=="easy" else 2 if q.get("difficulty")=="medium" else 3
-                if spent <= 5: pts += 1  # speed bonus
-                ss.score += pts
-                ss.streak += 1
-                ss.best_streak = max(ss.best_streak, ss.streak)
-                ss.history.append((q.get("difficulty","easy"), True, spent))
-                ss.answer_times.append(spent)
-                st.balloons()
+st.write("")
+st.markdown("<div class='hr'></div>", unsafe_allow_html=True)
+
+# تأكيد الإجابة
+cc1, cc2 = st.columns([1,1])
+with cc1:
+    if st.button(T["confirm"]):
+        if st.session_state["selected"] is None:
+            st.warning("⚠️ اختر إجابة أولاً" if lang=="ar" else "⚠️ Please select an option")
+        else:
+            st.session_state["answered"] = True
+            if st.session_state["selected"] == answer:
+                st.success(T["right"])
+                play_sound(SND_CORRECT)
+                st.session_state["score"] += 1
+                st.session_state["streak"] += 1
             else:
-                st.error(f"{L('wrong')} **{q['answer']}**")
-                play(SND_WRONG)
-                ss.streak = 0
-                ss.history.append((q.get("difficulty","easy"), False, spent))
-                ss.answer_times.append(spent)
+                st.error(f"{T['wrong']} {answer}")
+                play_sound(SND_WRONG)
+                st.session_state["streak"] = 0
 
-            time.sleep(0.6)
-            next_q(); st.rerun()
+with cc2:
+    if st.button(T["next"]):
+        # انتقال للسؤال التالي
+        st.session_state["idx"] += 1
+        st.session_state["show_hint"] = False
+        st.session_state["selected"] = None
+        st.session_state["answered"] = False
+        st.session_state["deadline"] = time.time() + st.session_state["per_q_sec"]
+        st.experimental_rerun()
 
-    cA, cB, cC, cD = st.columns(4)
-    with cA:
-        if st.button(L("hint"), use_container_width=True):
-            if ss.used_hint >= 2:
-                st.warning(T[ss.lang]["used_hint_max"])
-            else:
-                msg = q.get("hint")
-                if msg:
-                    st.info(f"💡 {msg}")
-                    ss.used_hint += 1
-                else:
-                    st.info(T[ss.lang]["no_hint"])
-    with cB:
-        if st.button(L("fifty"), use_container_width=True):
-            if ss.used_5050:
-                st.warning(T[ss.lang]["used_5050"])
-            else:
-                wrongs = [o for o in q["options"] if o != q["answer"]]
-                hide = set(random.sample(wrongs, k=min(2, len(wrongs))))
-                ss.hidden_options |= hide
-                ss.used_5050 = True
-                st.rerun()
-    with cC:
-        if st.button(L("skip"), use_container_width=True):
-            spent = int(time.time() - ss.question_start) if ss.question_start else 0
-            ss.history.append((q.get("difficulty","easy"), False, spent))
-            ss.answer_times.append(spent)
-            ss.streak = 0
-            next_q(); st.rerun()
-    with cD:
-        if st.button(L("mute"), use_container_width=True):
-            ss.sounds_on = not ss.sounds_on; st.rerun()
-
-else:
-    # ------------- End screen -------------
-    st.success(T[ss.lang]["finished"].format(name=ss.player))
-    st.write(T[ss.lang]["final_score"].format(score=ss.score, total=total))
-
-    # stats
-    if ss.answer_times:
-        avg = sum(ss.answer_times)/len(ss.answer_times)
-        fastest = min(ss.answer_times)
-        slowest = max(ss.answer_times)
-    else:
-        avg = fastest = slowest = 0
-    total_correct = sum(1 for _,ok,_ in ss.history if ok)
-    acc_all = accuracy(ss.history)
-    acc_easy = acc_for("easy"); acc_med = acc_for("medium"); acc_hard = acc_for("hard")
-
-    st.subheader(L("report"))
-    st.write(f"- ✅ {L('acc')}: **{acc_all:.1f}%**")
-    st.write(f"- ⏱️ {L('avg')}: **{avg:.1f}s** — {L('fastest')}: **{fastest}s** | {L('slowest')}: **{slowest}s**")
-    st.write(f"- 🔥 {L('streak')}: **{ss.best_streak}**")
-    st.write("– " + T[ss.lang]["by_diff"].format(easy=int(acc_easy), med=int(acc_med), hard=int(acc_hard)))
-
-    # leaderboard (session)
-    ss.leaderboard.append({
-        "name": ss.player, "score": ss.score, "mode": ss.difficulty,
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M")
-    })
-    ss.leaderboard = sorted(ss.leaderboard, key=lambda r: r["score"], reverse=True)[:10]
-
-    st.subheader(L("leaderboard"))
-    for i, r in enumerate(ss.leaderboard, 1):
-        st.write(f"{i}. {r['name']} — {r['score']} ({r['mode']}) — {r['date']}")
-
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button(L("restart_same"), use_container_width=True):
-            build_pool(); next_q()
-            ss.score=0; ss.streak=0; ss.best_streak=0
-            ss.history=[]; ss.answer_times=[]
-            ss.used_hint=0; ss.used_5050=False
-            if ss.global_timer_on: ss.global_start = time.time()
-            st.rerun()
-    with c2:
-        if st.button(L("new_settings"), use_container_width=True):
-            # reset to start
-            for key in ["player","pool","idx","history","answer_times"]:
-                ss[key] = defaults[key]
-            ss.score=0; ss.streak=0; ss.best_streak=0
-            ss.used_hint=0; ss.used_5050=False
-            ss.global_timer_on=False; ss.global_start=None
-            st.rerun()
+# إدارة انتهاء الوقت
+if st.session_state["deadline"]:
+    remaining = st.session_state["deadline"] - time.time()
+    if remaining <= 0 and not st.session_state["answered"]:
+        st.warning(T["time_up"])
+        play_sound(SND_WRONG)
+        st.session_state["streak"] = 0
+        # أظهر الإجابة الصحيحة
+        st.info((T["wrong"] + " " + answer) if lang=="ar" else (T["wrong"] + " " + answer))
+        # جهّز للسؤال التالي
+        st.session_state["answered"] = True
