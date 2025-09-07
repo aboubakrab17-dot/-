@@ -1,470 +1,122 @@
 [
   {
-    "question": "ما هو أضخم كوكب في المجموعة الشمسية؟",
-    "options": ["المشتري", "زحل", "نبتون", "أورانوس"],
-    "answer": "المشتري"
-  },
-  {
-    "question": "من هو مؤسس علم الجبر؟",
-    "options": ["الخوارزمي", "ابن سينا", "البيروني", "ابن الهيثم"],
-    "answer": "الخوارزمي"
-  },
-  {
-    "question": "ما هي عاصمة إثيوبيا؟",
-    "options": ["أديس أبابا", "نيروبي", "كمبالا", "أبوجا"],
-    "answer": "أديس أبابا"
-  },
-  {
-    "question": "ما هي الدولة الأكثر إنتاجاً للبن في العالم؟",
-    "options": ["البرازيل", "كولومبيا", "إثيوبيا", "فيتنام"],
-    "answer": "البرازيل"
-  },
-  {
-    "question": "كم عدد أضلاع المثلث؟",
-    "options": ["3", "4", "5", "6"],
-    "answer": "3"
-  },
-  {
-    "question": "في أي عام وقعت الحرب العالمية الثانية؟",
-    "options": ["1939", "1914", "1945", "1920"],
-    "answer": "1939"
-  },
-  {
-    "question": "أين يقع تمثال الحرية؟",
-    "options": ["نيويورك", "واشنطن", "باريس", "لندن"],
-    "answer": "نيويورك"
-  },
-  {
-    "question": "من هو أول رئيس للولايات المتحدة؟",
-    "options": ["جورج واشنطن", "توماس جيفرسون", "أبراهام لينكون", "جون آدامز"],
-    "answer": "جورج واشنطن"
-  },
-  {
-    "question": "ما هو أسرع حيوان بري؟",
-    "options": ["الفهد", "الأسد", "الحصان", "الذئب"],
-    "answer": "الفهد"
-  },
-  {
     "question": "ما هي عاصمة كندا؟",
-    "options": ["أوتاوا", "تورونتو", "مونتريال", "فانكوفر"],
-    "answer": "أوتاوا"
+    "options": ["تورونتو", "أوتاوا", "مونتريال", "فانكوفر"],
+    "answer": "أوتاوا",
+    "hint": "مدينة قريبة من كيبيك"
   },
   {
-    "question": "ما هي أكبر قارة في العالم؟",
-    "options": ["آسيا", "إفريقيا", "أمريكا الشمالية", "أوروبا"],
-    "answer": "آسيا"
+    "question": "في أي سنة هبط الإنسان على سطح القمر؟",
+    "options": ["1969", "1975", "1960", "1980"],
+    "answer": "1969",
+    "hint": "مهمة أبولو 11 🚀"
   },
   {
-    "question": "من هو مؤلف رواية البؤساء؟",
-    "options": ["فيكتور هوغو", "تولستوي", "ديستويفسكي", "تشارلز ديكنز"],
-    "answer": "فيكتور هوغو"
+    "question": "أكبر قارة في العالم من حيث المساحة؟",
+    "options": ["أفريقيا", "آسيا", "أوروبا", "أمريكا الجنوبية"],
+    "answer": "آسيا",
+    "hint": "فيها الصين والهند"
   },
   {
-    "question": "ما هو العنصر الذي يرمز له بالرمز O؟",
-    "options": ["الأكسجين", "الذهب", "الهيدروجين", "اليورانيوم"],
-    "answer": "الأكسجين"
+    "question": "ما هو أسرع حيوان بحري؟",
+    "options": ["الدلفين", "سمك التونة", "القرش الأبيض", "الحوت"],
+    "answer": "سمك التونة",
+    "hint": "يستعمل سرعته للهروب"
   },
   {
-    "question": "في أي عام أُعلنت الثورة الفرنسية؟",
-    "options": ["1789", "1776", "1812", "1800"],
-    "answer": "1789"
-  },
-  {
-    "question": "ما هو البحر الذي يفصل بين أوروبا وإفريقيا؟",
-    "options": ["البحر الأبيض المتوسط", "بحر قزوين", "المحيط الأطلسي", "البحر الأحمر"],
-    "answer": "البحر الأبيض المتوسط"
-  },
-  {
-    "question": "كم عدد ألوان قوس قزح؟",
-    "options": ["7", "6", "8", "5"],
-    "answer": "7"
-  },
-  {
-    "question": "من هو مخترع المصباح الكهربائي؟",
-    "options": ["توماس إديسون", "نيكولا تسلا", "غراهام بيل", "ماركوني"],
-    "answer": "توماس إديسون"
-  },
-  {
-    "question": "أين يقع أطول برج في العالم؟",
-    "options": ["دبي", "شنغهاي", "نيويورك", "طوكيو"],
-    "answer": "دبي"
-  },
-  {
-    "question": "ما هي أكبر دولة عربية من حيث المساحة؟",
-    "options": ["الجزائر", "السودان", "السعودية", "مصر"],
-    "answer": "الجزائر"
-  },
-  {
-    "question": "من هو مكتشف أمريكا؟",
-    "options": ["كريستوفر كولومبوس", "فاسكو دي غاما", "ماجلان", "ماركو بولو"],
-    "answer": "كريستوفر كولومبوس"
-  },
-  {
-    "question": "ما هو أسرع طائر في العالم؟",
-    "options": ["الصقر", "النسر", "النعامة", "الحمام"],
-    "answer": "الصقر"
+    "question": "ما هي الدولة التي اخترعت الورق؟",
+    "options": ["اليابان", "الصين", "مصر", "الهند"],
+    "answer": "الصين",
+    "hint": "منذ أكثر من 2000 سنة"
   },
   {
     "question": "كم عدد الكواكب في المجموعة الشمسية؟",
-    "options": ["8", "7", "9", "10"],
-    "answer": "8"
-  },
-  {
-    "question": "ما هو أطول نهر في العالم؟",
-    "options": ["النيل", "الأمازون", "اليانغتسي", "الدانوب"],
-    "answer": "الأمازون"
-  },
-  {
-    "question": "ما هي الدولة التي يطلق عليها اسم بلاد الشمس المشرقة؟",
-    "options": ["اليابان", "الصين", "كوريا", "الهند"],
-    "answer": "اليابان"
-  },
-  {
-    "question": "من هو أول إنسان صعد إلى الفضاء؟",
-    "options": ["يوري غاغارين", "نيل آرمسترونغ", "ألان شيبارد", "باز ألدرن"],
-    "answer": "يوري غاغارين"
-  }
-][
-  {
-    "question": "ما هو أضخم كوكب في المجموعة الشمسية؟",
-    "options": ["المشتري", "زحل", "نبتون", "أورانوس"],
-    "answer": "المشتري"
+    "options": ["7", "8", "9", "10"],
+    "answer": "8",
+    "hint": "تم حذف بلوتو من القائمة"
   },
   {
     "question": "من هو مؤسس علم الجبر؟",
-    "options": ["الخوارزمي", "ابن سينا", "البيروني", "ابن الهيثم"],
-    "answer": "الخوارزمي"
+    "options": ["ابن سينا", "الخوارزمي", "ابن رشد", "الفارابي"],
+    "answer": "الخوارزمي",
+    "hint": "عالم مسلم من أوزبكستان"
   },
   {
-    "question": "ما هي عاصمة إثيوبيا؟",
-    "options": ["أديس أبابا", "نيروبي", "كمبالا", "أبوجا"],
-    "answer": "أديس أبابا"
-  },
-  {
-    "question": "ما هي الدولة الأكثر إنتاجاً للبن في العالم؟",
-    "options": ["البرازيل", "كولومبيا", "إثيوبيا", "فيتنام"],
-    "answer": "البرازيل"
-  },
-  {
-    "question": "كم عدد أضلاع المثلث؟",
-    "options": ["3", "4", "5", "6"],
-    "answer": "3"
-  },
-  {
-    "question": "في أي عام وقعت الحرب العالمية الثانية؟",
-    "options": ["1939", "1914", "1945", "1920"],
-    "answer": "1939"
-  },
-  {
-    "question": "أين يقع تمثال الحرية؟",
-    "options": ["نيويورك", "واشنطن", "باريس", "لندن"],
-    "answer": "نيويورك"
-  },
-  {
-    "question": "من هو أول رئيس للولايات المتحدة؟",
-    "options": ["جورج واشنطن", "توماس جيفرسون", "أبراهام لينكون", "جون آدامز"],
-    "answer": "جورج واشنطن"
-  },
-  {
-    "question": "ما هو أسرع حيوان بري؟",
-    "options": ["الفهد", "الأسد", "الحصان", "الذئب"],
-    "answer": "الفهد"
-  },
-  {
-    "question": "ما هي عاصمة كندا؟",
-    "options": ["أوتاوا", "تورونتو", "مونتريال", "فانكوفر"],
-    "answer": "أوتاوا"
-  },
-  {
-    "question": "ما هي أكبر قارة في العالم؟",
-    "options": ["آسيا", "إفريقيا", "أمريكا الشمالية", "أوروبا"],
-    "answer": "آسيا"
-  },
-  {
-    "question": "من هو مؤلف رواية البؤساء؟",
-    "options": ["فيكتور هوغو", "تولستوي", "ديستويفسكي", "تشارلز ديكنز"],
-    "answer": "فيكتور هوغو"
-  },
-  {
-    "question": "ما هو العنصر الذي يرمز له بالرمز O؟",
-    "options": ["الأكسجين", "الذهب", "الهيدروجين", "اليورانيوم"],
-    "answer": "الأكسجين"
-  },
-  {
-    "question": "في أي عام أُعلنت الثورة الفرنسية؟",
-    "options": ["1789", "1776", "1812", "1800"],
-    "answer": "1789"
-  },
-  {
-    "question": "ما هو البحر الذي يفصل بين أوروبا وإفريقيا؟",
-    "options": ["البحر الأبيض المتوسط", "بحر قزوين", "المحيط الأطلسي", "البحر الأحمر"],
-    "answer": "البحر الأبيض المتوسط"
-  },
-  {
-    "question": "كم عدد ألوان قوس قزح؟",
-    "options": ["7", "6", "8", "5"],
-    "answer": "7"
-  },
-  {
-    "question": "من هو مخترع المصباح الكهربائي؟",
-    "options": ["توماس إديسون", "نيكولا تسلا", "غراهام بيل", "ماركوني"],
-    "answer": "توماس إديسون"
-  },
-  {
-    "question": "أين يقع أطول برج في العالم؟",
-    "options": ["دبي", "شنغهاي", "نيويورك", "طوكيو"],
-    "answer": "دبي"
-  },
-  {
-    "question": "ما هي أكبر دولة عربية من حيث المساحة؟",
-    "options": ["الجزائر", "السودان", "السعودية", "مصر"],
-    "answer": "الجزائر"
-  },
-  {
-    "question": "من هو مكتشف أمريكا؟",
-    "options": ["كريستوفر كولومبوس", "فاسكو دي غاما", "ماجلان", "ماركو بولو"],
-    "answer": "كريستوفر كولومبوس"
-  },
-  {
-    "question": "ما هو أسرع طائر في العالم؟",
-    "options": ["الصقر", "النسر", "النعامة", "الحمام"],
-    "answer": "الصقر"
-  },
-  {
-    "question": "كم عدد الكواكب في المجموعة الشمسية؟",
-    "options": ["8", "7", "9", "10"],
-    "answer": "8"
+    "question": "أين تقع أكبر غابة في العالم؟",
+    "options": ["الأمازون", "الكونغو", "سيبيريا", "الهند"],
+    "answer": "الأمازون",
+    "hint": "تسمى رئة الأرض 🌳"
   },
   {
     "question": "ما هو أطول نهر في العالم؟",
-    "options": ["النيل", "الأمازون", "اليانغتسي", "الدانوب"],
-    "answer": "الأمازون"
+    "options": ["الأمازون", "النيل", "اليانغتسي", "الدانوب"],
+    "answer": "النيل",
+    "hint": "يمر عبر مصر والسودان"
   },
   {
-    "question": "ما هي الدولة التي يطلق عليها اسم بلاد الشمس المشرقة؟",
-    "options": ["اليابان", "الصين", "كوريا", "الهند"],
-    "answer": "اليابان"
-  },
-  {
-    "question": "من هو أول إنسان صعد إلى الفضاء؟",
-    "options": ["يوري غاغارين", "نيل آرمسترونغ", "ألان شيبارد", "باز ألدرن"],
-    "answer": "يوري غاغارين"
-  }
-]
-[
-  {
-    "question": "What is the capital of Canada?",
-    "options": ["Toronto", "Ottawa", "Vancouver", "Montreal"],
-    "answer": "Ottawa"
-  },
-  {
-    "question": "Who painted the Mona Lisa?",
-    "options": ["Leonardo da Vinci", "Pablo Picasso", "Vincent van Gogh", "Michelangelo"],
-    "answer": "Leonardo da Vinci"
-  },
-  {
-    "question": "Which planet is known as the Red Planet?",
-    "options": ["Mars", "Venus", "Jupiter", "Saturn"],
-    "answer": "Mars"
-  },
-  {
-    "question": "What is the largest mammal in the world?",
-    "options": ["Blue whale", "Elephant", "Shark", "Giraffe"],
-    "answer": "Blue whale"
-  },
-  {
-    "question": "Who was the first President of the United States?",
-    "options": ["George Washington", "Abraham Lincoln", "Thomas Jefferson", "John Adams"],
-    "answer": "George Washington"
-  },
-  {
-    "question": "What is the currency of Japan?",
-    "options": ["Yen", "Dollar", "Won", "Peso"],
-    "answer": "Yen"
-  },
-  {
-    "question": "Which country hosted the 2016 Summer Olympics?",
-    "options": ["Brazil", "China", "UK", "Russia"],
-    "answer": "Brazil"
-  },
-  {
-    "question": "How many continents are there on Earth?",
-    "options": ["7", "6", "5", "8"],
-    "answer": "7"
-  },
-  {
-    "question": "What is the smallest prime number?",
-    "options": ["2", "3", "1", "5"],
-    "answer": "2"
-  },
-  {
-    "question": "Which gas do humans exhale?",
-    "options": ["Carbon dioxide", "Oxygen", "Nitrogen", "Helium"],
-    "answer": "Carbon dioxide"
-  },
-  {
-    "question": "Which country is famous for the pyramids?",
-    "options": ["Egypt", "Mexico", "Peru", "China"],
-    "answer": "Egypt"
-  },
-  {
-    "question": "In which city is the Eiffel Tower located?",
-    "options": ["Paris", "London", "Rome", "Berlin"],
-    "answer": "Paris"
-  },
-  {
-    "question": "Who wrote 'Hamlet'?",
-    "options": ["William Shakespeare", "Charles Dickens", "Mark Twain", "Jane Austen"],
-    "answer": "William Shakespeare"
-  },
-  {
-    "question": "What is the chemical symbol for gold?",
-    "options": ["Au", "Ag", "Gd", "Go"],
-    "answer": "Au"
-  },
-  {
-    "question": "Which ocean is the largest?",
-    "options": ["Pacific", "Atlantic", "Indian", "Arctic"],
-    "answer": "Pacific"
-  },
-  {
-    "question": "Who was the first man to fly into space?",
-    "options": ["Yuri Gagarin", "Neil Armstrong", "Buzz Aldrin", "Michael Collins"],
-    "answer": "Yuri Gagarin"
+    "question": "أي من الكواكب يُسمى بالكوكب الأحمر؟",
+    "options": ["المريخ", "الزهرة", "المشتري", "زحل"],
+    "answer": "المريخ",
+    "hint": "جار الأرض"
   },
   {
     "question": "What is the capital of Australia?",
-    "options": ["Canberra", "Sydney", "Melbourne", "Perth"],
-    "answer": "Canberra"
+    "options": ["Sydney", "Melbourne", "Canberra", "Brisbane"],
+    "answer": "Canberra",
+    "hint": "Not the biggest city"
   },
   {
-    "question": "Which is the fastest land animal?",
-    "options": ["Cheetah", "Lion", "Horse", "Tiger"],
-    "answer":
-[
-  {
-    "question": "What is the capital of South Korea?",
-    "options": ["Seoul", "Tokyo", "Beijing", "Pyongyang"],
-    "answer": "Seoul"
+    "question": "Who invented the light bulb?",
+    "options": ["Nikola Tesla", "Thomas Edison", "Einstein", "Newton"],
+    "answer": "Thomas Edison",
+    "hint": "American inventor"
   },
   {
-    "question": "Which scientist discovered penicillin?",
-    "options": ["Marie Curie", "Alexander Fleming", "Louis Pasteur", "Robert Koch"],
-    "answer": "Alexander Fleming"
+    "question": "Which is the largest ocean in the world?",
+    "options": ["Atlantic", "Indian", "Arctic", "Pacific"],
+    "answer": "Pacific",
+    "hint": "Covers one-third of Earth 🌍"
   },
   {
-    "question": "Which continent is the Sahara Desert located in?",
-    "options": ["Asia", "Africa", "Australia", "South America"],
-    "answer": "Africa"
+    "question": "Which gas do humans need to breathe?",
+    "options": ["Carbon dioxide", "Oxygen", "Nitrogen", "Helium"],
+    "answer": "Oxygen",
+    "hint": "Essential for life"
+  },
+  {
+    "question": "What is the smallest country in the world?",
+    "options": ["Monaco", "Malta", "Vatican City", "Luxembourg"],
+    "answer": "Vatican City",
+    "hint": "Inside Rome"
   },
   {
     "question": "Who painted the Mona Lisa?",
-    "options": ["Leonardo da Vinci", "Michelangelo", "Raphael", "Van Gogh"],
-    "answer": "Leonardo da Vinci"
+    "options": ["Van Gogh", "Picasso", "Leonardo da Vinci", "Michelangelo"],
+    "answer": "Leonardo da Vinci",
+    "hint": "Renaissance genius 🎨"
   },
   {
-    "question": "What is the chemical symbol for gold?",
-    "options": ["Ag", "Au", "Gd", "Go"],
-    "answer": "Au"
+    "question": "What is the hardest natural substance on Earth?",
+    "options": ["Gold", "Iron", "Diamond", "Quartz"],
+    "answer": "Diamond",
+    "hint": "Used in jewelry 💎"
   },
   {
-    "question": "In which year did World War I begin?",
-    "options": ["1912", "1914", "1916", "1918"],
-    "answer": "1914"
+    "question": "Which continent is the Sahara Desert in?",
+    "options": ["Asia", "Africa", "Australia", "South America"],
+    "answer": "Africa",
+    "hint": "The hottest desert"
   },
   {
-    "question": "Which is the largest ocean on Earth?",
-    "options": ["Atlantic Ocean", "Indian Ocean", "Pacific Ocean", "Arctic Ocean"],
-    "answer": "Pacific Ocean"
-  },
-  {
-    "question": "Who was the first man to walk on the moon?",
-    "options": ["Neil Armstrong", "Buzz Aldrin", "Yuri Gagarin", "Michael Collins"],
-    "answer": "Neil Armstrong"
-  },
-  {
-    "question": "What is the national sport of Japan?",
-    "options": ["Karate", "Judo", "Sumo Wrestling", "Baseball"],
-    "answer": "Sumo Wrestling"
-  },
-  {
-    "question": "What is the currency of China?",
-    "options": ["Yen", "Won", "Yuan", "Ringgit"],
-    "answer": "Yuan"
-  },
-  {
-    "question": "Which planet is closest to the Sun?",
-    "options": ["Venus", "Mercury", "Mars", "Earth"],
-    "answer": "Mercury"
-  },
-  {
-    "question": "Which animal is the largest mammal on Earth?",
-    "options": ["Elephant", "Blue Whale", "Giraffe", "Shark"],
-    "answer": "Blue Whale"
-  },
-  {
-    "question": "In which country is the Eiffel Tower located?",
-    "options": ["Italy", "France", "Germany", "Spain"],
-    "answer": "France"
-  },
-  {
-    "question": "Which metal is liquid at room temperature?",
-    "options": ["Mercury", "Silver", "Gold", "Copper"],
-    "answer": "Mercury"
-  },
-  {
-    "question": "What is the smallest prime number?",
-    "options": ["0", "1", "2", "3"],
-    "answer": "2"
-  },
-  {
-    "question": "Which gas do humans inhale to survive?",
-    "options": ["Carbon Dioxide", "Nitrogen", "Oxygen", "Helium"],
-    "answer": "Oxygen"
-  },
-  {
-    "question": "Which instrument has black and white keys?",
-    "options": ["Guitar", "Piano", "Violin", "Drum"],
-    "answer": "Piano"
-  },
-  {
-    "question": "Which country hosted the 2016 Summer Olympics?",
-    "options": ["China", "Brazil", "UK", "Japan"],
-    "answer": "Brazil"
-  },
-  {
-    "question": "What is the capital of Canada?",
-    "options": ["Toronto", "Ottawa", "Vancouver", "Montreal"],
-    "answer": "Ottawa"
-  },
-  {
-    "question": "Who developed the theory of evolution?",
-    "options": ["Isaac Newton", "Charles Darwin", "Galileo Galilei", "Albert Einstein"],
-    "answer": "Charles Darwin"
-  },
-  {
-    "question": "Which blood type is known as the universal donor?",
-    "options": ["A", "B", "O-", "AB+"],
-    "answer": "O-"
-  },
-  {
-    "question": "How many colors are in a rainbow?",
-    "options": ["5", "6", "7", "8"],
-    "answer": "7"
-  },
-  {
-    "question": "What is the capital of Italy?",
-    "options": ["Venice", "Milan", "Rome", "Florence"],
-    "answer": "Rome"
-  },
-  {
-    "question": "Which organ in the human body pumps blood?",
-    "options": ["Lungs", "Liver", "Heart", "Kidneys"],
-    "answer": "Heart"
+    "question": "In which year did World War II end?",
+    "options": ["1940", "1945", "1939", "1950"],
+    "answer": "1945",
+    "hint": "After Hiroshima and Nagasaki"
   },
   {
     "question": "Which is the longest bone in the human body?",
-    "options": ["Skull", "Spine", "Femur", "Tibia"],
-    "answer": "Femur"
+    "options": ["Femur", "Tibia", "Spine", "Humerus"],
+    "answer": "Femur",
+    "hint": "Located in the leg 🦵"
   }
-    ]
+]
