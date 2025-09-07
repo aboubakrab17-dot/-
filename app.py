@@ -1,424 +1,399 @@
 # app.py
-# لعبة أسئلة عربية تشتغل على Streamlit
-# - يقرأ ملف questions.json إن وُجد
-# - إذا ماكانش الملف، يستخدم بيانات احتياطية مُدمَجة
-# - يمنع تكرار الأسئلة، يدير عداد لكل سؤال، ويدعم تلميح وشرح
-# - تصميم واجهة عربية وخلفية متدرجة CSS
-# - لا يعتمد على صور/أصوات خارجية لتشغيله الأساسي
+# لعبة ألغاز عربية بسيطة وجذابة لـ Streamlit
+# حفظ الملف كـ app.py ثم شغّل: streamlit run app.py
 
 import streamlit as st
-import json, random, time, os
+import json
+import random
+import time
 from pathlib import Path
 from copy import deepcopy
 
-# ---------------------- تهيئة الصفحة والستايـل ----------------------
-st.set_page_config(page_title="لعبة الألغاز - عربي", layout="centered", initial_sidebar_state="collapsed")
+# -------------------- إعدادات موارد (عدل المسارات لو تحب صوت/خلفية محلية) --------------------
+BASE = Path(__file__).parent
+QUESTIONS_FILE = BASE / "questions.json"   # لو تحط ملف JSON هنا رح يتم استخدامه
+ASSETS_DIR = BASE / "assets"               # مجلد اختياري للأصوات/صور
 
-# CSS لتحسين الواجهة وجعلها "شابة"
+# أمثلة: ضع مسار أو رابط إذا عندك، أو اتركهم فارغين
+SOUND_CORRECT = ""     # "assets/correct.mp3" أو رابط mp3
+SOUND_WRONG = ""       # "assets/wrong.mp3"
+SOUND_TIMEOUT = ""     # "assets/timeout.mp3"
+SOUND_BG = ""          # "assets/bg.mp3"  (موسيقى خلفية - اختياري، لا تضع إن لم تكن متوفرة)
+
+# -------------------- إعداد صفحة و CSS --------------------
+st.set_page_config(page_title="لعبة الألغاز العربية", page_icon="🧠", layout="centered")
+
 st.markdown(
     """
     <style>
-    :root{
-      --bg1: #0f1724;
-      --bg2: #0b2231;
-      --accent: #00d4ff;
-      --card: rgba(255,255,255,0.04);
-      --text: #e6eef6;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
     html, body, [data-testid="stAppViewContainer"] {
-      background: linear-gradient(135deg, var(--bg1) 0%, #0b1220 50%, #091226 100%);
-      color: var(--text);
-      font-family: "Segoe UI", Tahoma, Arial, "Noto Naskh Arabic", sans-serif;
+        background: linear-gradient(135deg,#07172b 0%, #0f2a43 50%, #072033 100%);
+        color: #eaf6ff;
+        font-family: 'Cairo', sans-serif;
     }
-    .big-title {
-      font-size: 44px;
-      font-weight: 700;
-      margin-bottom: 0.1rem;
-    }
-    .subtitle {
-      color: #c8d6df;
-      margin-top: 0;
-      margin-bottom: 1rem;
-    }
-    .card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border-radius: 14px;
-      padding: 18px;
-      box-shadow: 0 6px 18px rgba(2,6,23,0.6);
-      margin-bottom: 12px;
-    }
-    .btn {
-      background: linear-gradient(90deg,#ffb86b,#ff6d6d);
-      color: white;
-      padding: 8px 14px;
-      border-radius: 10px;
-      border: none;
-      font-weight: 600;
-    }
-    .small-muted { color: #b8c4cb; font-size: 13px; }
-    .center { text-align: center; }
-    .question-box { padding: 20px; border-radius: 12px; background: rgba(0,0,0,0.25); margin-bottom: 12px; }
-    .option-btn { width:100%; text-align: right; padding: 14px; border-radius: 10px; background: rgba(255,255,255,0.02); color: var(--text); margin-bottom: 8px; }
+    .title { font-size: 38px; font-weight:700; color: #ffd166; text-align:center; margin-bottom:6px; }
+    .subtitle { text-align:center; color:#bfe9ff; margin-top:0; margin-bottom:18px; }
+    .card { background: rgba(255,255,255,0.03); border-radius:14px; padding:14px; box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+    .question { font-size:20px; font-weight:700; margin-bottom:12px; }
+    .option { background: rgba(255,255,255,0.02); border-radius:10px; padding:12px; margin:8px 0; cursor:pointer; color:#eaf6ff; }
+    .btn-primary > button { background: linear-gradient(90deg,#ffb86b,#ff6d6d); color:#071426; font-weight:700; border-radius:10px; padding:10px 16px; }
+    .btn-ghost > button { background: transparent; border:1px solid rgba(255,255,255,0.12); color:#eaf6ff; border-radius:10px; padding:10px 16px; }
+    .small { color:#bfe9ff; font-size:13px; }
+    .timer { background: linear-gradient(90deg,#00d4ff,#00ffa6); color:#071426; padding:6px 10px; border-radius:999px; font-weight:800; display:inline-block; }
+    .progress-wrap { background: rgba(255,255,255,0.06); height:10px; border-radius:999px; overflow:hidden; margin-top:6px; }
+    .progress-bar { height:10px; background: linear-gradient(90deg,#00ffa6,#00d4ff); width:0%; transition: width 0.25s ease; }
+    .info { background: rgba(255,255,255,0.02); padding:8px 12px; border-radius:10px; color:#cfefff; }
     </style>
-    """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True
+)
 
-# ---------------------- إعدادات المسارات والـ assets ----------------------
-BASE_DIR = Path(__file__).parent
-QUESTIONS_FILE = BASE_DIR / "questions.json"
-# لو عندك ملفات صوت أو صورة ضيف المسارات هنا داخل المجلد assets
-ASSETS_DIR = BASE_DIR / "assets"
-BACKGROUND_IMG = ""  # لو عندك صورة خلفية، ضع المسار "assets/background.jpg" أو URL
-SOUND_CORRECT = ""    # مثال: "assets/correct.mp3" أو URL
-SOUND_WRONG = ""      # مثال: "assets/wrong.mp3" أو URL
-# إذا ماكانوش موجودين، الكود يتخطاهم بدون أخطاء.
-
-# ---------------------- بيانات اسئلة احتياطية (fallback) بالعربية ----------------------
-# كل عنصر: {"id": int, "question": "...", "choices":[...], "answer": index_of_correct_choice, "explain": "...", "hint": "..."}
-FALLBACK_DATA = [
-    {"id":1, "question":"ما هي أصغر كوكب في المجموعة الشمسية؟",
-     "choices":["المشتري","الزهرة","عطارد","المريخ"],
-     "answer":2, "explain":"عطارد هو أصغر كواكب المجموعة الشمسية من حيث القُطر.", "hint":"هو أقرب كوكب إلى الشمس."},
-    {"id":2, "question":"ما هو رمز العنصر الكيميائي الحديد؟",
-     "choices":["Au","Fe","Ag","Cu"],
-     "answer":1, "explain":"الحديد يرمز له بالرمز Fe.", "hint":"يبدأ بحرف F."},
-    {"id":3, "question":"ما هي عاصمة اليابان؟",
-     "choices":["بكين","سيول","طوكيو","بانكوك"],
-     "answer":2, "explain":"طوكيو هي عاصمة اليابان.", "hint":"تبدأ بحرف ط."},
-    {"id":4, "question":"ما لغة البرمجة الشهيرة المستخدمة لتعلم المبتدئين وسيرفرات الويب؟",
-     "choices":["بايثون","جافا","سي","روبي"],
-     "answer":0, "explain":"بايثون بسيطة ومناسبة للمبتدئين ولها مكتبات لويب.", "hint":"اسمها يُنطق 'باي-ثون'."},
-    {"id":5, "question":"ما اسم الطبقة العليا من الغلاف الجوي للأرض؟",
-     "choices":["الستراتوسفير","التروبوسفير","الميزوسفير","الميزوسفير الخارجي (الثيرموسفير)"],
-     "answer":3, "explain":"الثيرموسفير (Thermosphere) هي من الطبقات العليا.", "hint":"توجد أعلاه الفضاء الخارجي."},
-    {"id":6, "question":"ما هو أسرع حيوان بري؟",
-     "choices":["الأسد","الفهد","الضبع","الكنغر"],
-     "answer":1, "explain":"الفهد (Cheetah) هو أسرع حيوان بري قادراً على الوصول لسرعات كبيرة قصيرة.", "hint":"يُعرف بسرعته الكبيرة جداً على مسافات قصيرة."},
-    {"id":7, "question":"ما هي أكبر قارة من حيث المساحة؟",
-     "choices":["أفريقيا","أوروبا","آسيا","أمريكا الشمالية"],
-     "answer":2, "explain":"آسيا هي أكبر القارات مساحة وسكانًا.", "hint":"تضم الصين والهند واليابان."},
-    {"id":8, "question":"أي عنصر يُستخدم في صنع الرقاقات الإلكترونية (Chips) بكثرة؟",
-     "choices":["الذهب","السيليكون","الحديد","الألومنيوم"],
-     "answer":1, "explain":"السيليكون مادة أساسية في تصنيع أشباه الموصلات.", "hint":"اسمه يشبه 'سيليكون'."},
-    {"id":9, "question":"ما هو المصطلح المعبر عن سرعة انتقال الضوء تقريبا؟",
-     "choices":["300 ألف كلم/س","300 ألف كم/ث","30 ألف كم/ث","3 آلاف كم/ث"],
-     "answer":1, "explain":"سرعة الضوء ≈ 300,000 كم/ثانية.", "hint":"سرعة الضوء تُقاس بالكم/ثانية."},
-    {"id":10, "question":"ما هو العضو الذي يضخ الدم في جسم الإنسان؟",
-     "choices":["الرئتين","المخ","القلب","الطحال"],
-     "answer":2, "explain":"القلب هو مضخة الدم الرئيسية في جسم الإنسان.", "hint":"ينبض ويشعر بالنبض في الصدر."},
-    # أضف هنا المزيد حسب الحاجة — يمكنك لاحقًا تحميل questions.json خاص بك
-]
-
-# ---------------------- وظائف مساعدة ----------------------
-def load_questions_from_file(path: Path):
-    """يحاول قراءة ملف JSON وإعادة قائمة الأسئلة"""
+# -------------------- تحميل الأسئلة --------------------
+def load_questions_file(path: Path):
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        # توفّر توافق بسيط بالتحقق من النموذج
         cleaned = []
-        for i, r in enumerate(data):
-            if isinstance(r, dict) and "question" in r and "choices" in r and "answer" in r:
+        for i, item in enumerate(data):
+            # توقع البنية: {"question": "...", "options": [...], "answer": "...", "hint": "..."}
+            if not isinstance(item, dict):
+                continue
+            q = item.get("question") or item.get("q") or None
+            opts = item.get("options") or item.get("choices") or item.get("choices_list") or []
+            ans = item.get("answer") or item.get("correct") or None
+            hint = item.get("hint") or item.get("explain") or ""
+            if q and isinstance(opts, list) and ans in opts:
                 cleaned.append({
-                    "id": r.get("id", i+1),
-                    "question": r["question"],
-                    "choices": r["choices"],
-                    "answer": int(r["answer"]),
-                    "explain": r.get("explain", ""),
-                    "hint": r.get("hint", "")
+                    "id": item.get("id", i+1),
+                    "question": str(q),
+                    "options": opts,
+                    "answer": ans,
+                    "hint": str(hint)
                 })
         return cleaned
     except Exception as e:
         return None
 
-def init_session():
-    """تهيئة مفاتيح session_state اللازمة"""
-    if "game_ready" not in st.session_state:
-        st.session_state.game_ready = False
-    if "data" not in st.session_state:
-        st.session_state.data = []
-    if "pool" not in st.session_state:
-        st.session_state.pool = []
-    if "current" not in st.session_state:
-        st.session_state.current = None
-    if "score" not in st.session_state:
-        st.session_state.score = 0
-    if "index" not in st.session_state:
-        st.session_state.index = 0
-    if "num_questions" not in st.session_state:
-        st.session_state.num_questions = 10
-    if "time_per_q" not in st.session_state:
-        st.session_state.time_per_q = 30
-    if "question_start_time" not in st.session_state:
-        st.session_state.question_start_time = None
-    if "used_ids" not in st.session_state:
-        st.session_state.used_ids = set()
-    if "last_answer_correct" not in st.session_state:
-        st.session_state.last_answer_correct = None
-    if "username" not in st.session_state:
-        st.session_state.username = ""
-    if "hints_used" not in st.session_state:
-        st.session_state.hints_used = 0
-    if "played" not in st.session_state:
-        st.session_state.played = False
-    if "choices_selected" not in st.session_state:
-        st.session_state.choices_selected = {}
-    if "sound" not in st.session_state:
-        st.session_state.sound = True
+# بيانات افتراضية (تُستخدم لو ماكانش ملف)
+DEFAULT_QUESTIONS = [
+    {"id":1, "question":"ما هو الكوكب المعروف بالكوكب الأحمر؟", "options":["المريخ","الزهرة","عطارد","المشتري"], "answer":"المريخ", "hint":"اسمه يبدأ بحرف الميم."},
+    {"id":2, "question":"من هو مخترع المصباح الكهربائي (الشائع ذكره)؟", "options":["توماس إديسون","نيوتن","ألبرت أينشتاين","جراهام بيل"], "answer":"توماس إديسون", "hint":"اشتهر بتطوير المصباح التجاري."},
+    {"id":3, "question":"كم عدد الكواكب في المجموعة الشمسية حسب التصنيف الحالي؟", "options":["8","9","7","10"], "answer":"8", "hint":"بعد إعادة تصنيف بلوتو."},
+    {"id":4, "question":"ما هي عاصمة الجزائر؟", "options":["وهران","قسنطينة","الجزائر العاصمة","عنابة"], "answer":"الجزائر العاصمة", "hint":"تبدأ ب'ال' وتحتوي على كلمة 'عاصمة' أحياناً."},
+    {"id":5, "question":"ما هو أسرع حيوان بري؟", "options":["الفهد","الأسد","الغزال","الحصان"], "answer":"الفهد", "hint":"يقوم بانقضاضات سريعة جدا."},
+    {"id":6, "question":"ما هو العنصر الذي يرمز له بالرمز O؟", "options":["الذهب","الأوكسجين","الحديد","الفضة"], "answer":"الأوكسجين", "hint":"نستهلكه عند التنفس."},
+    {"id":7, "question":"ما هي أكبر قارة من حيث المساحة؟", "options":["أفريقيا","آسيا","أوروبا","أمريكا الشمالية"], "answer":"آسيا", "hint":"تضم الصين والهند."},
+    {"id":8, "question":"من هو مؤلف رواية 'البؤساء'؟", "options":["فيكتور هوغو","تولستوي","تشارلز ديكنز","مارك توين"], "answer":"فيكتور هوغو", "hint":"كاتب فرنسي."},
+    {"id":9, "question":"ما هو العضو الذي يضخ الدم في الجسم؟", "options":["الكبد","القلب","الرئتين","الطحال"], "answer":"القلب", "hint":"يمكنك قياس نبضه في الرسغ."},
+    {"id":10, "question":"أي بروتوكول يضمن اتصال آمن للمواقع؟", "options":["HTTP","FTP","SMTP","HTTPS"], "answer":"HTTPS", "hint":"يتضمن حرف S في النهاية."}
+]
 
-def prepare_game(num_questions:int):
-    """خلي قائمة أسئلة عشوائية (بدون تكرار) جاهزة للعب"""
-    data = deepcopy(st.session_state.data)
-    if not data:
-        return False, "لا توجد أسئلة متاحة. حمل ملف questions.json أو املأ بيانات داخل التطبيق."
-    # فلترة الأسئلة حسب اللغة/شرط اذا حبيت لاحقًا
-    # مزج القائمة واختيار n عناصر
-    random.shuffle(data)
-    pool = data[:num_questions] if num_questions <= len(data) else data[:]
-    st.session_state.pool = pool
+# تحميل من ملف إذا موجود
+if QUESTIONS_FILE.exists():
+    loaded = load_questions_file(QUESTIONS_FILE)
+    if loaded is None or len(loaded) == 0:
+        st.warning("ملف questions.json موجود لكن صياغته غير صحيحة أو فارغ. سيتم استخدام الأسئلة الافتراضية.")
+        QUESTIONS = deepcopy(DEFAULT_QUESTIONS)
+    else:
+        QUESTIONS = loaded
+else:
+    QUESTIONS = deepcopy(DEFAULT_QUESTIONS)
+
+# فقط تأكد ان العناصر متوفرة
+if not isinstance(QUESTIONS, list) or len(QUESTIONS) == 0:
+    QUESTIONS = deepcopy(DEFAULT_QUESTIONS)
+
+# -------------------- تهيئة session_state --------------------
+def init():
+    st.session_state.setdefault("started", False)
+    st.session_state.setdefault("player", "")
+    st.session_state.setdefault("num_questions", min(10, len(QUESTIONS)))
+    st.session_state.setdefault("time_per_q", 25)
+    st.session_state.setdefault("pool", [])
+    st.session_state.setdefault("index", 0)
+    st.session_state.setdefault("current", None)   # السؤال الحالي dict
+    st.session_state.setdefault("q_start", None)   # وقت بداية السؤال
+    st.session_state.setdefault("score", 0)
+    st.session_state.setdefault("xp", 0)
+    st.session_state.setdefault("level", 1)
+    st.session_state.setdefault("streak", 0)
+    st.session_state.setdefault("leaderboard", [])  # قائمة بسيطة داخل الجلسة
+    st.session_state.setdefault("sound", True)
+    st.session_state.setdefault("hints_used", 0)
+    st.session_state.setdefault("timed_out_processed", {})  # map index->bool
+
+init()
+
+# -------------------- أدوات اللعبة --------------------
+def make_pool(n):
+    pool = QUESTIONS.copy()
+    random.shuffle(pool)
+    return pool[:n]
+
+def start_game():
+    n = st.session_state.num_questions
+    st.session_state.pool = make_pool(n)
     st.session_state.index = 0
     st.session_state.score = 0
-    st.session_state.used_ids = set()
+    st.session_state.xp = 0
+    st.session_state.level = 1
+    st.session_state.streak = 0
     st.session_state.hints_used = 0
-    st.session_state.choices_selected = {}
-    st.session_state.game_ready = True
-    st.session_state.played = True
-    return True, "جاهز"
+    st.session_state.timed_out_processed = {}
+    st.session_state.started = True
+    load_next_question()
 
-def start_question():
-    """ضبط بداية سؤال جديد"""
+def load_next_question():
     if st.session_state.index >= len(st.session_state.pool):
         st.session_state.current = None
+        st.session_state.q_start = None
         return
-    q = st.session_state.pool[st.session_state.index]
-    st.session_state.current = deepcopy(q)
-    st.session_state.question_start_time = time.time()
-    # توليد مفتاح عشوائي لكل سؤال session-local
-    st.session_state.choices_selected[st.session_state.index] = None
+    q = deepcopy(st.session_state.pool[st.session_state.index])
+    # shuffle options but keep answer as value (string)
+    opts = q.get("options", [])[:]
+    random.shuffle(opts)
+    q["shuffled"] = opts
+    st.session_state.current = q
+    st.session_state.q_start = time.time()
+    # mark timed_out_processed false for this index
+    st.session_state.timed_out_processed[st.session_state.index] = False
+    # set radio default
+    st.session_state.setdefault(f"choice_{st.session_state.index}", None)
 
-def time_left():
-    """تُعيد الوقت المتبقي (بالثواني) للسؤال الحالي"""
-    if st.session_state.question_start_time is None:
+def time_remaining():
+    if st.session_state.q_start is None:
         return st.session_state.time_per_q
-    elapsed = time.time() - st.session_state.question_start_time
-    left = int(st.session_state.time_per_q - elapsed)
+    left = int(st.session_state.time_per_q - (time.time() - st.session_state.q_start))
     return max(0, left)
 
-def check_answer(selected_index:int):
-    """تتحقّق الإجابة، تُحدّث النتيجة وتُرجع (is_correct, explanation)"""
+def process_timeout():
+    idx = st.session_state.index
+    if st.session_state.timed_out_processed.get(idx):
+        return
+    st.session_state.timed_out_processed[idx] = True
+    # treat as wrong / skip: reset streak, no xp
+    st.session_state.streak = 0
+    # optionally play timeout sound
+    if st.session_state.sound and SOUND_TIMEOUT:
+        try:
+            st.audio(SOUND_TIMEOUT)
+        except:
+            pass
+    # move next
+    st.session_state.index += 1
+    if st.session_state.index < len(st.session_state.pool):
+        load_next_question()
+    else:
+        st.session_state.current = None
+        st.session_state.q_start = None
+    # rerun to update UI
+    st.rerun()
+
+def handle_confirm(selected_value):
     q = st.session_state.current
-    if q is None: return False, ""
-    correct = (selected_index == q["answer"])
+    if q is None:
+        return
+    correct = (selected_value == q["answer"])
     if correct:
         st.session_state.score += 1
-        st.session_state.last_answer_correct = True
+        st.session_state.xp += 10
+        st.session_state.streak += 1
+        # level up logic: every 50 xp increases level
+        if st.session_state.xp >= st.session_state.level * 50:
+            st.session_state.level += 1
+            # celebration
+            st.balloons()
     else:
-        st.session_state.last_answer_correct = False
-    return correct, q.get("explain","")
-
-# ---------------------- تحميل البيانات ----------------------
-init_session()
-
-# محاولة قراءة ملف الخارجي إذا موجود
-loaded = None
-if QUESTIONS_FILE.exists():
-    loaded = load_questions_from_file(QUESTIONS_FILE)
-    if loaded is None:
-        # لو فشل التحميل أظهر تحذير للمستخدم لكن استمر مع fallback
-        st.warning("ملف questions.json موجود لكن لم أستطع قراءته بشكل صحيح. سأستخدم بيانات احتياطية.")
-else:
-    # لا توجد ملف، نعرض لاحقاً زر لرفع الملف
-    pass
-
-if loaded:
-    st.session_state.data = loaded
-else:
-    # استخدام قائمة احتياطية
-    st.session_state.data = deepcopy(FALLBACK_DATA)
-
-# ---------------------- واجهة المستخدم (الصفحة الرئيسية) ----------------------
-st.markdown('<div class="big-title">لعبة الألغاز ✨</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">اختبر معلوماتك في مواضيع مختلفة — واجهة عربية كاملة.</div>', unsafe_allow_html=True)
-
-# شريط جانبي أو إعدادات سريعة
-with st.sidebar:
-    st.markdown("<h3>الإعدادات</h3>", unsafe_allow_html=True)
-    # اسم اللاعب
-    st.session_state.username = st.text_input("اكتب اسمك للبدء:", value=st.session_state.username or "")
-    # تفعيل أو تعطيل الأصوات
-    st.session_state.sound = st.checkbox("الصوت 🔊", value=st.session_state.sound)
-    # تحميل ملف أسئلة جديد
-    uploaded = st.file_uploader("حمّل ملف questions.json (اختياري)", type=["json"])
-    if uploaded is not None:
+        st.session_state.streak = 0
+        # could deduct xp? leave as-is
+    # play sounds if set
+    if st.session_state.sound:
         try:
-            data_uploaded = json.load(uploaded)
-            cleaned = []
-            for i, r in enumerate(data_uploaded):
-                if isinstance(r, dict) and "question" in r and "choices" in r and "answer" in r:
-                    cleaned.append({
-                        "id": r.get("id", i+1),
-                        "question": r["question"],
-                        "choices": r["choices"],
-                        "answer": int(r["answer"]),
-                        "explain": r.get("explain", ""),
-                        "hint": r.get("hint", "")
-                    })
-            if cleaned:
-                st.session_state.data = cleaned
-                st.success(f"تم تحميل {len(cleaned)} سؤال بنجاح.")
-            else:
-                st.error("ملف JSON لا يحتوي على أسئلة بصيغة صحيحة.")
-        except Exception as e:
-            st.error("خطأ في قراءة الملف. تأكد من صيغته (UTF-8 JSON).")
-
-    st.markdown("---")
-    st.markdown("معلومات:")
-    st.markdown("- التطبيق يدعم تحميل ملف JSON بصيغة معينة.\n- إن لم تقم بالتحميل، يستخدم بيانات احتياطية.")
-    st.markdown("---")
-
-# إعدادات اللعبة في الصفحة الرئيسية
-with st.container():
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    # عدد الأسئلة
-    num_q = st.slider("عدد الأسئلة:", min_value=5, max_value=min(50, len(st.session_state.data) if st.session_state.data else 50), value=st.session_state.num_questions)
-    st.session_state.num_questions = num_q
-
-    # وقت لكل سؤال
-    t_q = st.slider("مدة كل سؤال (بالثواني):", min_value=10, max_value=180, value=st.session_state.time_per_q)
-    st.session_state.time_per_q = t_q
-
-    # زر البدء
-    start_clicked = st.button("▶ ابدأ اللعبة", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# رسالة عدد الأسئلة المتاحة
-st.write(f"الأسئلة المتاحة الآن: **{len(st.session_state.data)}**")
-
-# عند الضغط على بدأ — نجهّز اللعبة
-if start_clicked:
-    ok, msg = prepare_game(st.session_state.num_questions)
-    if not ok:
-        st.error(msg)
+            if correct and SOUND_CORRECT:
+                st.audio(SOUND_CORRECT)
+            elif not correct and SOUND_WRONG:
+                st.audio(SOUND_WRONG)
+        except:
+            pass
+    # move next
+    st.session_state.index += 1
+    if st.session_state.index < len(st.session_state.pool):
+        load_next_question()
     else:
-        start_question()
-        # إعادة تحميل الصفحة لضمان ظهور السؤال
-        st.experimental_rerun()
+        st.session_state.current = None
+        st.session_state.q_start = None
+    st.rerun()
 
-# إذا اللعبة جاهزة، نعرض سؤال / ساحة اللعب
-if st.session_state.game_ready and st.session_state.current:
-    qidx = st.session_state.index
+def use_hint():
+    q = st.session_state.current
+    if not q:
+        return
+    options = q["shuffled"]
+    correct = q["answer"]
+    wrongs = [o for o in options if o != correct]
+    if len(wrongs) >= 2:
+        # remove two wrongs
+        to_remove = set(random.sample(wrongs, 2))
+        q["shuffled"] = [o for o in options if o not in to_remove]
+        st.session_state.hints_used += 1
+        # update in pool too
+        st.session_state.pool[st.session_state.index]["shuffled"] = q["shuffled"]
+    else:
+        st.info("لا يمكن حذف خيارات أكثر.")
+
+# -------------------- واجهة اللعبة --------------------
+st.markdown('<div class="title">لعبة الألغاز العربية</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">اختبر معلوماتك — واجهة عربية سهلة وسريعة</div>', unsafe_allow_html=True)
+
+# top controls
+col_top = st.columns([3,1,1])
+with col_top[0]:
+    name = st.text_input("✍️ اكتب اسمك (اختياري):", value=st.session_state.player)
+    st.session_state.player = name.strip()
+with col_top[1]:
+    sound_toggle = st.checkbox("🔊 صوت", value=st.session_state.sound)
+    st.session_state.sound = sound_toggle
+with col_top[2]:
+    # show XP and level small
+    st.markdown(f"<div style='text-align:center' class='info'><b>XP:</b> {st.session_state.xp} — <b>مستوى:</b> {st.session_state.level}</div>", unsafe_allow_html=True)
+
+st.markdown("")  # spacer
+
+# configuration / start area (if not started)
+if not st.session_state.started:
+    with st.container():
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("### ⚙️ إعدادات اللعبة", unsafe_allow_html=True)
+        n_q = st.slider("عدد الأسئلة:", min_value=5, max_value=min(50, len(QUESTIONS)), value=st.session_state.num_questions)
+        st.session_state.num_questions = n_q
+        t_q = st.slider("مدة كل سؤال (ثانية):", min_value=8, max_value=120, value=st.session_state.time_per_q)
+        st.session_state.time_per_q = t_q
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("▶️ ابدأ اللعبة الآن", use_container_width=True):
+            if len(QUESTIONS) == 0:
+                st.error("لا توجد أسئلة. أضف ملف questions.json أو تأكد من البيانات.")
+            else:
+                start_game()
+        st.markdown("</div>", unsafe_allow_html=True)
+    # show sample info and leaderboard
+    st.markdown("<br>")
+    st.markdown("<div class='card'><b>ملاحظات:</b> يمكنك تحميل ملف questions.json في نفس مجلد التطبيق لتغيير الأسئلة. اللعبة تستخدم بيانات افتراضية إن لم يوجد ملف.</div>", unsafe_allow_html=True)
+
+# gameplay
+elif st.session_state.started and st.session_state.current:
+    q = st.session_state.current
+    idx = st.session_state.index
     total = len(st.session_state.pool)
-    st.markdown(f'<div class="card"><div class="small-muted">السؤال {qidx+1} من {total}</div>', unsafe_allow_html=True)
 
-    # شريط التقدّم
-    progress = int(((qidx)/total) * 100)
-    st.progress(progress)
+    # header row: question number, score, streak
+    cols = st.columns([1,1,1])
+    cols[0].markdown(f"**السؤال:** {idx+1} / {total}")
+    cols[1].markdown(f"**النقاط:** {st.session_state.score}")
+    cols[2].markdown(f"**السلسلة:** {st.session_state.streak}")
 
-    # المساحة الرئيسية للسؤال
-    st.markdown('<div class="question-box">', unsafe_allow_html=True)
-    st.markdown(f"<h3 style='direction:rtl'>{st.session_state.current['question']}</h3>", unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    # progress bar
+    progress_pct = int((idx / total) * 100)
+    st.progress(progress_pct)
 
-    # الوقت المتبقي
-    left = time_left()
-    st.markdown(f"⏱️ الوقت المتبقي: **{left} ث**")
-    # إعادة حساب لو انتهى الوقت
-    if left <= 0:
-        # تعامل كأن المستخدم أخطأ أو تخطى (نمر للسؤال التالي مع عدم إضافة نقطة)
-        st.success("انتهى الوقت! يتم الانتقال للسؤال التالي.")
-        st.session_state.index += 1
-        if st.session_state.index < len(st.session_state.pool):
-            start_question()
-            st.experimental_rerun()
-        else:
-            st.session_state.current = None
-            st.experimental_rerun()
+    # question card
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown(f"<div class='question'>❓ {q['question']}</div>", unsafe_allow_html=True)
 
-    # اختيارات المستخدم (radio)
-    choices = st.session_state.current["choices"]
-    # نحفظ اختيار المستخدم في session state
-    sel_key = f"sel_{st.session_state.index}"
-    if sel_key not in st.session_state:
-        st.session_state[sel_key] = None
+    # time left
+    left = time_remaining()
+    # if timeout happened and not processed, process now
+    if left <= 0 and not st.session_state.timed_out_processed.get(idx, False):
+        # show timeout message then process
+        st.warning("⏳ انتهى الوقت! يتم الانتقال للسؤال التالي...")
+        process_timeout()   # this will rerun
+    # show timer & visual bar
+    st.markdown(f"<div>⏱ الوقت المتبقي: <span class='timer'>{left} ث</span></div>", unsafe_allow_html=True)
+    pct_bar = int(((st.session_state.time_per_q - left) / st.session_state.time_per_q) * 100) if st.session_state.time_per_q>0 else 0
+    st.markdown(f"<div class='progress-wrap'><div class='progress-bar' style='width:{pct_bar}%' ></div></div>", unsafe_allow_html=True)
 
-    # عرض كل اختيار كزر راديو/زر مع تصميم
-    selected = st.radio("الاختيارات:", options=list(range(len(choices))), format_func=lambda i: choices[i], index=st.session_state[sel_key] if st.session_state[sel_key] is not None else 0, key=sel_key, horizontal=False)
+    # show shuffled options
+    options = q.get("shuffled", q.get("options", [])).copy()
+    choice_key = f"choice_{idx}"
+    # default radio selection if not set
+    if st.session_state.get(choice_key) is None and len(options)>0:
+        st.session_state[choice_key] = 0
+    selected_index = st.radio("اختر الإجابة:", options, index=st.session_state.get(choice_key,0), key=choice_key)
 
-    # أزرار: تأكيد، تخطّي، تلميح
-    col1, col2, col3 = st.columns([1,1,1])
-    with col1:
-        if st.button("✅ تأكيد", key=f"confirm_{st.session_state.index}"):
-            st.session_state[sel_saved] = None if False else None  # dummy line to avoid linter
-            # تحقق من الاجابة
-            correct, explanation = check_answer(selected)
-            if correct:
-                st.success("إجابة صحيحة! ✅")
-            else:
-                st.error("إجابة خاطئة ❌")
-            # عرض الشرح
-            if explanation:
-                st.info(f"توضيح: {explanation}")
-            # بعد التأكيد نمر للسؤال التالي بعد تأخير بسيط
-            time.sleep(0.6)
+    # buttons row
+    c1, c2, c3 = st.columns([1,1,1])
+    with c1:
+        if st.button("✅ تأكيد الإجابة"):
+            # handle confirm
+            handle_confirm(selected_index)
+    with c2:
+        if st.button("💡 تلميح"):
+            use_hint()
+            # stay on same question; no rerun needed (UI updates)
+    with c3:
+        if st.button("⏭ تخطّي"):
+            st.session_state.streak = 0
             st.session_state.index += 1
             if st.session_state.index < len(st.session_state.pool):
-                start_question()
-                st.experimental_rerun()
+                load_next_question()
             else:
                 st.session_state.current = None
-                st.experimental_rerun()
+                st.session_state.q_start = None
+            st.rerun()
 
-    with col2:
-        if st.button("⏭ تخطّي", key=f"skip_{st.session_state.index}"):
-            st.info("تم تخطي السؤال.")
-            st.session_state.index += 1
-            if st.session_state.index < len(st.session_state.pool):
-                start_question()
-                st.experimental_rerun()
-            else:
-                st.session_state.current = None
-                st.experimental_rerun()
+    # show hint text optionally
+    if q.get("hint"):
+        st.markdown(f"<div class='small'>تلميح: {q.get('hint')}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)  # close card
 
-    with col3:
-        if st.button("💡 تلميح", key=f"hint_{st.session_state.index}"):
-            hint = st.session_state.current.get("hint","لا يوجد تلميح متاح.")
-            st.info(f"تلميح: {hint}")
-            st.session_state.hints_used += 1
-
-    # عرض نقاط ومعلومات صغيرة
-    st.markdown("---")
-    st.write(f"النقاط الحالية: **{st.session_state.score}**  —  التلميحات المستخدمة: **{st.session_state.hints_used}**")
-    st.markdown("---")
-
-# لو اللعبة انتهت
-elif st.session_state.played and (not st.session_state.current):
-    st.markdown('<div class="card center">', unsafe_allow_html=True)
-    st.markdown(f"<h2>انتهت الجولة 🎉</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p class='small-muted'>النتيجة: <strong>{st.session_state.score}</strong> من <strong>{st.session_state.num_questions}</strong></p>", unsafe_allow_html=True)
+# finished: show results
+elif st.session_state.started and not st.session_state.current:
+    total = len(st.session_state.pool)
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown(f"## 🎉 انتهت الجولة — نتيجتك: {st.session_state.score} / {total}")
+    st.markdown(f"**XP:** {st.session_state.xp} — **المستوى:** {st.session_state.level}")
+    st.markdown(f"**التلميحات المستخدمة:** {st.session_state.hints_used}")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # إعادة تشغيل / لعب جديد
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔁 العب مرة أخرى"):
-            ok, msg = prepare_game(st.session_state.num_questions)
-            if ok:
-                start_question()
-                st.experimental_rerun()
-            else:
-                st.error(msg)
-    with col2:
-        if st.button("🏠 العودة للرئيسية"):
-            st.session_state.game_ready = False
-            st.experimental_rerun()
-
-# لو اللعبة لم تبدأ بعد (الصفحة الرئيسية الأولية)
-else:
+    # leaderboard: نضيف نتيجة الجلسة
+    name = st.session_state.player or "لاعب"
+    st.session_state.leaderboard.append({"name": name, "score": st.session_state.score, "xp": st.session_state.xp, "level": st.session_state.level, "time": int(time.time())})
+    # عرض أعلى 10
+    sorted_lb = sorted(st.session_state.leaderboard, key=lambda x: (-x["score"], -x["xp"], x["time"]))
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='center'><strong>قواعد اللعبة:</strong></div>", unsafe_allow_html=True)
-    st.markdown("- اضغط 'ابدأ اللعبة' لبدء الجولات.\n- يمكنك تحميل ملف questions.json في الشريط الجانبي.\n- كل سؤال له وقت محدد يمكنك تغييره.\n- سيتم منع تكرار الأسئلة ضمن الجولة الحالية.")
+    st.markdown("### 🏆 لوحة النتائج (داخل الجلسة)")
+    for i, row in enumerate(sorted_lb[:10], start=1):
+        st.markdown(f"{i}. {row['name']} — {row['score']} نقطة — XP:{row['xp']} — مستوى:{row['level']}")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------------- نهاية الملف ----------------------
-# تنبيه: لو تحب تضيف أصوات، ضع روابط ملفات mp3 في المتغيرات SOUND_CORRECT و SOUND_WRONG،
-# واستعمل st.audio(URL) عند الحاجة بعد كل إجابة.
-# كذلك لو تريد أن تحفظ سجل أعلى النقاط في ملف leaderboard.json يمكن إضافته بسهولة.
+    # action buttons
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🔁 العب مرة أخرى"):
+            start_game()
+    with c2:
+        if st.button("🏠 العودة إلى القائمة"):
+            st.session_state.started = False
+            st.session_state.current = None
+            st.rerun()
+
+# -------------------- شريط جانبي للمساعدة --------------------
+with st.sidebar:
+    st.markdown("## معلومات سريعة")
+    st.markdown(f"- الأسئلة المتاحة: **{len(QUESTIONS)}**")
+    st.markdown(f"- استخدم ملف questions.json لو حبيت تعدل الأسئلة")
+    st.markdown("---")
+    st.markdown("صيغة السؤال في JSON (مثال):")
+    st.code("""
+[
+  {
+    "question": "ما هي عاصمة فرنسا؟",
+    "options": ["باريس","لندن","برلين","روما"],
+    "answer": "باريس",
+    "hint": "مدينة النور"
+  }
+]
+    """, language="json")
+    st.markdown("---")
+    st.markdown("ملاحظة: لو وضعت أصوات في المتغيرات في أعلى الكود، ستُشغّل عند الإجابة.")
+
+# نهاية الملف
