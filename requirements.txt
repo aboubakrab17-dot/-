@@ -1,6 +1,1 @@
 streamlit
-fpdf
-qrcode
-Pillow
-streamlit==1.30.0
-Pillow==10.0.0
