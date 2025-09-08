@@ -1,377 +1,610 @@
 # app.py
+# متطلبات: streamlit, Pillow
+# pip install streamlit Pillow
+
 import streamlit as st
-from datetime import datetime, date
+from PIL import Image, ImageDraw, ImageFont
+import random
 import json
+from io import BytesIO
+from datetime import datetime
 
-st.set_page_config(page_title="بوت تعليمي - منصة بسيطة", page_icon="📚", layout="wide")
-
-# -------------------------
-# CSS / تصميم (ستايلي)
-# -------------------------
-PAGE_CSS = """
-<style>
-/* خلفية عامة */
-.stApp {
-  background: linear-gradient(180deg, #0f172a 0%, #1f2937 100%);
-  color: #e6eef8;
-  font-family: "Cairo", "Helvetica", sans-serif;
-  padding: 18px;
-}
-
-/* العنوان */
-h1 { color: #fffb; text-align:center; font-size:34px; margin-bottom:8px; }
-
-/* الكونتينرات */
-.chat-container {
-  background: rgba(255,255,255,0.03);
-  border-radius: 16px;
-  padding: 18px;
-  min-height: 420px;
-  box-shadow: 0 6px 24px rgba(2,6,23,0.6);
-}
-
-/* فقاعات البوت */
-.msg-bot {
-  background: linear-gradient(90deg,#a5f3fc,#60a5fa);
-  color:#04202a;
-  padding:12px 14px;
-  display:inline-block;
-  border-radius:16px;
-  margin:8px 6px;
-  max-width:72%;
-  box-shadow: 0 4px 10px rgba(2,6,23,0.5);
-}
-
-/* فقاعات المستخدم */
-.msg-user {
-  background: linear-gradient(90deg,#d1fae5,#34d399);
-  color:#042018;
-  padding:12px 14px;
-  display:inline-block;
-  border-radius:16px;
-  margin:8px 6px;
-  max-width:72%;
-  float:right;
-  box-shadow: 0 4px 10px rgba(2,6,23,0.5);
-}
-
-/* وقت الرسالة */
-.msg-time { display:block; font-size:11px; color:rgba(255,255,255,0.6); margin-top:6px; }
-
-/* الاقتراحات */
-.suggestion {
-  background: rgba(255,255,255,0.06);
-  color:#fff;
-  padding:8px 10px;
-  border-radius:14px;
-  margin:6px;
-  display:inline-block;
-  cursor:pointer;
-  border: 1px solid rgba(255,255,255,0.04);
-}
-.suggestion:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
-
-/* الادخال */
-input[type="text"], textarea { background: rgba(255,255,255,0.02) !important; color: #fff !important; }
-.stButton>button { background: linear-gradient(90deg,#06b6d4,#3b82f6) !important; color: #fff !important; border-radius:10px !important; padding:8px 14px; }
-.small-muted { color: rgba(255,255,255,0.6); font-size:12px; }
-
-hr { border: none; height:1px; background: rgba(255,255,255,0.03); margin:12px 0; }
-</style>
-"""
-st.markdown(PAGE_CSS, unsafe_allow_html=True)
-
-# -------------------------
-# بيانات ثابتة: اقتراحات + دورات + دروس
-# -------------------------
-SUGGESTIONS = [
-    "اعطني خطة دراسة يومية لمدة أسبوع",
-    "علّمني 5 كلمات إنجليزية مهمة مع أمثلة",
-    "اعطني سؤال اختبار قواعد بسيط",
-    "ترجم: كيف حالك؟ إلى الإنجليزية",
-    "اعطيني نصائح لتحسين النطق",
-    "علّمني التحية بالإنجليزية",
-    "اعطني جملة يومية لتكرارها",
-    "اختبرني في الماضي البسيط",
-    "كيف أكتب رسالة بريد رسمي قصيرة؟",
-    "اقترح نشاط تفاعلي للفظ الكلمات",
-    "أعطني تمرين استماع قصير",
-    "صِف أحد المواضيع للكتابة 150 كلمة",
-    "علمّني 3 أفعال شائعة مع أمثلة",
-    "كيف أتحسن في المحادثة اليومية؟",
-    "جرّب اختبار MCQ بسيط",
-    "علّمني قاعدة زمن المضارع التام",
-    "أعطني 10 كلمات سياحية مُهمة",
-    "علّمني إدخال الترحيب في رسالة رسمية",
-    "ارسل لي نص قصير لأقرؤه وألّخصه",
-    "اعطني مثلًا ثقافيًا إنجليزيًا مع تفسير",
-    "كيف أحسن مفرداتي يومياً؟",
-    "اقترح لعبة لتعلم المفردات",
-    "علّمني أسئلة مقابلة عمل قصيرة",
-    "أرسل لي حوار بسيط بالإنجليزية",
-    "اعطني 5 عبارات للحديث عن الهوايات",
-    "علّمني عبارات طلب الاتجاهات",
-    "اختبرني في مصطلحات العمل",
-    "علّمني كيفية وصف صورة",
-    "أعطني 3 تعابير عامية مفيدة",
-    "اقترح لي اختبار كتابة 100 كلمة",
-    "علمني كيف أعتذر بصيغة لبقة",
-    "تدرب معي على الأسئلة العامة",
-    "نقّح لي جملة قصيرة أكتبها",
-    "اقترح خطة أسبوعية للتحدّث",
-    "علّمني كلمات عند السفر للطائرة",
-    "اعطني قواعد سريعة للكتابة",
-    "اشرح لي الفرق بين since و for",
-    "أعطني أمثلة على conditional نوع 1",
-    "علّمني مصطلحات الطقس الأساسية",
-    "اعطني تمريناً في تركيب الجمل",
-    "علّمني وصف المشاعر بكلمات بسيطة",
-    "اقترح 3 أفكار لمشروع تعليمي بسيط",
-    "كيف أعد عرض تقديمي بسيط باللغة الإنجليزية؟",
-    "اطرح علي 5 أسئلة شخصية للتدريب",
-    "علّمني كيف أقرأ جدولاً صغيراً",
-    "أرسل لي حكمة اليوم قصيرة",
-    "اعطني نصائح لتذكر الكلمات الجديدة"
-]
-
-# دروس بسيطة (مثال)
-COURSES = {
-    "اللغة الإنجليزية": [
-        {"type":"mcq", "q":"What is the plural of 'mouse'?", "options":["mouses","mice","mousees"], "answer":"mice"},
-        {"type":"mcq", "q":"Choose correct verb: He ____ to school every day.", "options":["go","goes","going"], "answer":"goes"},
-        {"type":"text", "q":"Translate to Arabic: 'Good morning' ", "answer":"صباح الخير"},
+# ---------------------------
+# بيانات دروس وكلمات (قابلة للتعديل/التوسيع)
+# ---------------------------
+LESSONS = {
+    "English": [
+        {
+            "id": "en_1",
+            "title": "Greetings & Basics",
+            "examples": [
+                {"ar": "مرحبا", "target": "Hello"},
+                {"ar": "مع السلامة", "target": "Goodbye"},
+                {"ar": "شكرا", "target": "Thank you"},
+                {"ar": "من فضلك", "target": "Please"},
+                {"ar": "نعم", "target": "Yes"},
+                {"ar": "لا", "target": "No"}
+            ],
+            "sentences": [
+                {"ar": "كيف حالك؟", "target": "How are you?"},
+                {"ar": "أنا بخير، شكراً", "target": "I'm fine, thank you"}
+            ]
+        },
+        {
+            "id": "en_2",
+            "title": "Daily Actions",
+            "examples": [
+                {"ar": "آكل", "target": "I eat"},
+                {"ar": "أقرأ", "target": "I read"},
+                {"ar": "أعمل", "target": "I work"},
+                {"ar": "أنام", "target": "I sleep"}
+            ],
+            "sentences": [
+                {"ar": "أنا أذهب إلى المدرسة", "target": "I go to school"},
+                {"ar": "هو يقرأ كتاباً", "target": "He reads a book"}
+            ]
+        },
     ],
-    "اللغة الفرنسية": [
-        {"type":"mcq", "q":"Bonjour means:", "options":["Good night","Hello","Goodbye"], "answer":"Hello"},
-        {"type":"text", "q":"Translate to French: 'Thank you'", "answer":"merci"},
+    "French": [
+        {
+            "id": "fr_1",
+            "title": "Salutations & Bases",
+            "examples": [
+                {"ar": "مرحبا", "target": "Bonjour"},
+                {"ar": "مع السلامة", "target": "Au revoir"},
+                {"ar": "شكرا", "target": "Merci"},
+                {"ar": "من فضلك", "target": "S'il vous plaît"},
+                {"ar": "نعم", "target": "Oui"},
+                {"ar": "لا", "target": "Non"}
+            ],
+            "sentences": [
+                {"ar": "كيف حالك؟", "target": "Comment ça va?"},
+                {"ar": "أنا بخير، شكراً", "target": "Je vais bien, merci"}
+            ]
+        },
+        {
+            "id": "fr_2",
+            "title": "Actions journalières",
+            "examples": [
+                {"ar": "آكل", "target": "Je mange"},
+                {"ar": "أقرأ", "target": "Je lis"},
+                {"ar": "أعمل", "target": "Je travaille"},
+                {"ar": "أنام", "target": "Je dors"}
+            ],
+            "sentences": [
+                {"ar": "أنا أذهب إلى المدرسة", "target": "Je vais à l'école"},
+                {"ar": "هو يقرأ كتاباً", "target": "Il lit un livre"}
+            ]
+        },
     ]
 }
 
-# -------------------------
-# تهيئة حالة الجلسة
-# -------------------------
+# اقتراحات سريعة (50 اقتراح منسق)
+SUGGESTIONS = [
+    "اعطني جملة يومية لترديدها",
+    "علمني 5 كلمات إنجليزية مفيدة",
+    "علمني 5 كلمات فرنسية مفيدة",
+    "اختبرني على التحيات",
+    "اختبرني على الأفعال اليومية",
+    "رتّب الجملة التالية",
+    "املأ الفراغ: I ____ to school",
+    "اختر الترجمة الصحيحة لكلمة 'Hello'",
+    "علّمني اسم أيام الأسبوع بالعربية والإنجليزية",
+    "علّمني الأرقام حتى 10",
+    "ترجم: كيف حالك؟",
+    "أعطني 3 جمل بسيطة بالإنجليزية",
+    "أعطني 3 جمل بسيطة بالفرنسية",
+    "مرّني على النطق: Thank you",
+    "علّمني كلمات للسفر",
+    "علّمني عبارات عند الطلب في مطعم",
+    "اختبرني على القواعد: a/an",
+    "أعطني نصيحة لتعلم اللغة",
+    "علّمني عبارات للتعارف",
+    "اسألني ترجمة كلمة عشوائية",
+    "علّمني صيغة الماضي للأفعال الشائعة",
+    "علّمني كيفية السؤال عن الاتجاه",
+    "أعطني حوار بسيط للترحيب",
+    "علّمني كيفية تقديم نفسك",
+    "أعطني 5 صفات شخصية بالعربية والإنجليزية",
+    "علّمني كلمات الطقس",
+    "اختبرني على العائلات (family)",
+    "علّمني أفعال خاطئة شائعة",
+    "رتب الجملة: 'to / I / school / go'",
+    "املأ الفراغ: She ____ (eat/eats) an apple",
+    "اختر الصحيح: 'Their/There/They're'",
+    "علّمني كلمات العمل (office)",
+    "علّمني كلمات في المطبخ",
+    "علّمني مفرد وجمع لكلمات",
+    "علّمني عبارات طبية بسيطة",
+    "أعطني مثال على سؤال وإجابته",
+    "علّمني كلمات المشاعر (happy, sad...)",
+    "عطي اختبار سريع 5 أسئلة",
+    "علّمني كلمات حول الأكل",
+    "علّمني كلمات حول الأوقات",
+    "رتّب الكلمات لتكوين سؤال",
+    "علّمني أفعال مساعده (can, must)",
+    "علّمني كيفية قول 'أحب' و 'لا أحب'",
+    "أعطني قائمة مألوفة من 10 كلمات",
+    "علّمني كلمات المواصلات"
+]
+# ---------------------------
+# مساعدة واجهة (CSS)
+# ---------------------------
+st.set_page_config(page_title="بوت تعلم لغات - شبيه Duolingo", page_icon="🦉", layout="wide")
+APP_CSS = """
+<style>
+:root {
+  --bubble-user: linear-gradient(90deg,#8df5c8,#2bd59f);
+  --bubble-bot: linear-gradient(90deg,#b6e0ff,#7aa8ff);
+  --bg: linear-gradient(180deg, #0f1724 0%, #0b1220 100%);
+  --card: rgba(255,255,255,0.03);
+}
+body, .stApp { background: var(--bg); font-family: 'Cairo', sans-serif; color: #e6eef8; }
+h1, h2, h3 { color: #fff; }
+.chat-bubble {
+  padding: 14px 18px;
+  border-radius: 16px;
+  margin: 8px 0;
+  max-width: 86%;
+  font-size: 1.05rem;
+}
+.user { background: var(--bubble-user); color: #05221a; margin-left: auto; border-bottom-right-radius: 6px; }
+.bot { background: var(--bubble-bot); color: #04213b; border-bottom-left-radius: 6px; }
+.sidebar-card { background: var(--card); padding: 12px; border-radius: 12px; color: #dfefff; }
+.btn-primary { background: linear-gradient(90deg,#00c6ff,#0072ff); color:white; padding:10px 14px; border-radius:10px; }
+.small-muted { color: #9fb0cc; font-size:0.9rem; }
+.suggestion { background: rgba(255,255,255,0.06); padding:10px; border-radius:10px; margin:6px 0; color:#fff; }
+.progress-box { background: rgba(255,255,255,0.03); padding:10px; border-radius:12px; }
+</style>
+"""
+st.markdown(APP_CSS, unsafe_allow_html=True)
+
+# ---------------------------
+# جسد التطبيق / حالة الجلسة
+# ---------------------------
+if "lang" not in st.session_state:
+    st.session_state.lang = "English"
+if "xp" not in st.session_state:
+    st.session_state.xp = 0
+if "hearts" not in st.session_state:
+    st.session_state.hearts = 5
+if "level" not in st.session_state:
+    st.session_state.level = 1
+if "current_lesson" not in st.session_state:
+    st.session_state.current_lesson = None
 if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "points" not in st.session_state:
-    st.session_state.points = 0
-if "streak" not in st.session_state:
-    st.session_state.streak = 0
-if "last_active_date" not in st.session_state:
-    st.session_state.last_active_date = None
-if "current_course" not in st.session_state:
-    st.session_state.current_course = None
-if "lesson_index" not in st.session_state:
-    st.session_state.lesson_index = 0
-if "input_text" not in st.session_state:
-    st.session_state.input_text = ""
-if "user" not in st.session_state:
-    st.session_state.user = "زائر"
+    st.session_state.messages = []  # list of dicts: {"who": "user"/"bot","text": "...", "time": "..."}
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "progress" not in st.session_state:
+    st.session_state.progress = 0  # 0-100 percent in current lesson
 
-# رسالة ترحيب أولية
-if not st.session_state.messages:
-    st.session_state.messages.append({
-        "sender":"bot",
-        "text":"👋 أهلاً! أنا بوت المساعدة التعليمي. اختَر اقتراحاً أو اكتب سؤالك. عندك دورات، دروس وتحديات بسيطة هنا.",
-        "time": datetime.now().strftime("%H:%M")
-    })
-
-# -------------------------
+# ---------------------------
 # وظائف مساعدة
-# -------------------------
-def add_message(sender, text):
-    st.session_state.messages.append({
-        "sender": sender,
-        "text": text,
-        "time": datetime.now().strftime("%H:%M")
+# ---------------------------
+def add_message(who, text):
+    st.session_state.messages.append({"who": who, "text": text, "time": datetime.now().strftime("%H:%M")})
+
+def add_xp(points):
+    st.session_state.xp += points
+    # Level up every 200 XP
+    next_level_xp = st.session_state.level * 200
+    if st.session_state.xp >= next_level_xp:
+        st.session_state.level += 1
+        add_message("bot", f"🎉 مبارك! وصلت للمستوى {st.session_state.level}! لقد ربحت مهارة جديدة.")
+        st.session_state.xp = st.session_state.xp - next_level_xp
+
+def lose_heart():
+    st.session_state.hearts = max(0, st.session_state.hearts - 1)
+    if st.session_state.hearts == 0:
+        add_message("bot", "💤 انتهت القلوب! استرح وانطلق من جديد بعد قليل (أعد الصفحة أو اضغط إعادة تعيين القلوب).")
+
+def reset_hearts():
+    st.session_state.hearts = 5
+
+def pick_random_example(lang):
+    lesson_list = LESSONS.get(lang, [])
+    if not lesson_list: return None
+    lesson = random.choice(lesson_list)
+    word = random.choice(lesson["examples"])
+    return lesson, word
+
+def save_progress_snapshot():
+    st.session_state.history.append({
+        "time": datetime.now().isoformat(),
+        "xp": st.session_state.xp,
+        "level": st.session_state.level,
+        "hearts": st.session_state.hearts,
+        "progress": st.session_state.progress,
+        "lang": st.session_state.lang
     })
 
-def award_points(n):
-    st.session_state.points += n
-    today = date.today().isoformat()
-    if st.session_state.last_active_date != today:
-        st.session_state.streak = st.session_state.streak + 1 if st.session_state.last_active_date else 1
-        st.session_state.last_active_date = today
-
-def simple_bot_reply(user_text):
-    txt = user_text.strip().lower()
-    # أوامر محددة
-    if txt in ["ابدأ دورة", "ابدأ دورة انجليزية", "ابدأ الان", "start english"]:
-        st.session_state.current_course = "اللغة الإنجليزية"
-        st.session_state.lesson_index = 0
-        return "✔️ تم فتح دورة اللغة الإنجليزية — اضغط 'ابدأ الدرس' للبدء."
-    if txt.startswith("درس"):
-        return "اضغط زر 'ابدأ الدرس' لفتح السؤال التالي."
-    # إذا النص مطابق لأحد الاقتراحات
-    for s in SUGGESTIONS:
-        if txt == s.lower():
-            return "حسناً — سأُجيب على هذا الاقتراح: " + s
-    # إجابات عامة وتجريبية
-    if any(k in txt for k in ["كيف", "وش", "شلون", "ماذا", "what", "how", "why"]):
-        return "🔎 سؤال جيد — جرّب صياغة السؤال بوضوح أو اختر أحد الاقتراحات الجاهزة."
-    # fallback
-    return "🙂 فهمت. جرّب اقتراحاً من القائمة أو اكتب 'ابدأ دورة' لبدء درس."
-
-def start_next_lesson():
-    course = st.session_state.current_course
-    if not course or course not in COURSES:
-        add_message("bot", "لم تختَر دورة بعد — استخدم لوحة الدورات الجانبية أو اكتب 'ابدأ دورة'.")
-        return
-    idx = st.session_state.lesson_index
-    lessons = COURSES[course]
-    if idx >= len(lessons):
-        add_message("bot", f"🎉 انتهت الدروس في {course}. لقد أكملت الدورة!")
-        return
-    q = lessons[idx]
-    # عرض السؤال
-    if q["type"] == "mcq":
-        # سنخزن السؤال القائم في session_state لكي نتحقق لاحقاً
-        st.session_state.current_question = q
-        add_message("bot", f"سؤال {idx+1}: {q['q']} \n(اختر الإجابة الصحيحة من الخيارات في اليمين)")
-    elif q["type"] == "text":
-        st.session_state.current_question = q
-        add_message("bot", f"السؤال {idx+1}: {q['q']} \n(اكتب إجابتك ثم اضغط تحقق)")
-    else:
-        st.session_state.current_question = q
-        add_message("bot", f"السؤال {idx+1}: {q['q']}")
-
-def check_answer(user_ans):
-    q = st.session_state.get("current_question")
-    if not q:
-        add_message("bot", "ما في سؤال مفعل الآن — اضغط 'ابدأ الدرس' لبدء سؤال.")
-        return
-    if q["type"] == "mcq":
-        correct = (user_ans == q["answer"])
-        if correct:
-            award_points(10)
-            add_message("bot", "✅ إجابة صحيحة! رصيدك زاد +10 نقاط.")
-            st.session_state.lesson_index += 1
+# تمارين
+def exercise_translate(ar_text, target_text):
+    # نعرض للمستخدم النص العربي ويكتب الترجمة (target)
+    ans = st.text_input("✍️ اكتب الترجمة هنا (باللغة المختارة):", key=f"translate_{random.randint(0,999999)}")
+    if st.button("تحقق ✅", key=f"check_trans_{random.randint(0,999999)}"):
+        user = ans.strip()
+        if not user:
+            st.warning("اكتب إجابتك أولا")
+            return False
+        if user.lower() == target_text.lower():
+            add_message("bot", f"✅ ممتاز! الإجابة صحيحة: `{target_text}`")
+            add_xp(15)
+            st.success("✅ صحيح! +15 XP")
+            return True
         else:
-            add_message("bot", f"❌ ليست صحيحة. الإجابة الصحيحة: {q['answer']}. حاول التالي.")
-            st.session_state.lesson_index += 1
-    elif q["type"] == "text":
-        # مقارنة صغيرة بحساسية بسيطة (lower & strip)
-        if user_ans.strip().lower() == q["answer"].strip().lower():
-            award_points(12)
-            add_message("bot", "✅ ممتاز! إجابة صحيحة — +12 نقاط.")
+            lose_heart()
+            add_message("bot", f"❌ تقريباً: الإجابة الصحيحة كانت `{target_text}`")
+            st.error(f"❌ خاطئ. الإجابة الصحيحة: {target_text}. -1 قلب")
+            return False
+
+def exercise_multiple_choice(prompt_text, choices, correct):
+    st.write("📝 السؤال:")
+    st.info(prompt_text)
+    choice = st.radio("اختر الإجابة الصحيحة:", choices, key=f"mc_{random.randint(0,999999)}")
+    if st.button("تحقق ✅", key=f"mc_check_{random.randint(0,999999)}"):
+        if choice == correct:
+            add_message("bot", f"✅ ممتاز! `{correct}` هي الإجابة الصحيحة.")
+            add_xp(10)
+            st.success("✅ صحيح! +10 XP")
+            return True
         else:
-            add_message("bot", f"❌ يبدو أن الإجابة مختلفة. الإجابة المتوقعة: {q['answer']}")
-        st.session_state.lesson_index += 1
-    else:
-        add_message("bot", "نوع سؤال غير معروف.")
-    # بعد التحقق ننهي السؤال الحالي
-    st.session_state.current_question = None
+            lose_heart()
+            add_message("bot", f"❌ للأسف ... الإجابة الصحيحة: `{correct}`")
+            st.error(f"❌ خاطئ. الإجابة الصحيحة: {correct}. -1 قلب")
+            return False
 
-# -------------------------
-# الشريط الجانبي
-# -------------------------
-with st.sidebar:
-    st.markdown("<h2 style='color:#fff'>📚 الدورات والتقدم</h2>", unsafe_allow_html=True)
-    selected_course = st.selectbox("اختر دورة", ["(لا شيء)"] + list(COURSES.keys()), index=0)
-    if selected_course != "(لا شيء)":
-        st.session_state.current_course = selected_course
-    st.write("")
-    st.metric("نقاطك", st.session_state.points)
-    st.metric("سلسلة يومية (streak)", st.session_state.streak)
-    st.write("---")
-    st.markdown("### أدوات")
-    if st.button("⬇️ تنزيل التقدّم (JSON)"):
-        data = {
-            "user": st.session_state.user,
-            "points": st.session_state.points,
-            "streak": st.session_state.streak,
-            "course": st.session_state.current_course,
-            "lesson_index": st.session_state.lesson_index,
-            "messages": st.session_state.messages
-        }
-        st.download_button("Download progress.json", data=json.dumps(data, ensure_ascii=False, indent=2), file_name="progress.json", mime="application/json")
-    if st.button("مسح المحادثة/إعادة تعيين"):
-        st.session_state.messages = []
-        st.session_state.current_question = None
-        st.session_state.lesson_index = 0
-        st.session_state.points = 0
-        st.session_state.streak = 0
-        st.session_state.last_active_date = None
-        add_message("bot", "🧹 تم إعادة التهيئة — مرحباً مجدداً!")
-    st.write("---")
-    st.markdown("### مساعدة سريعة")
-    st.markdown("- اكتب سؤال أو اختر اقتراحًا\n- ابحث عن: `ابدأ دورة` لبدء دروس\n- استخدم أزرار الاقتراحات أسفل الصفحة")
-
-# -------------------------
-# الواجهة الرئيسية: العنوان + لوحة الدردشة + الاقتراحات
-# -------------------------
-st.markdown("<h1>💬 البوت الشاب — منصة تعليمية بسيطة</h1>", unsafe_allow_html=True)
-cols = st.columns((3,1))
-
-with cols[0]:
-    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-    # عرض الرسائل
-    for m in st.session_state.messages:
-        if m["sender"] == "bot":
-            st.markdown(f'<div class="msg-bot">{m["text"]}<span class="msg-time"> {m["time"]}</span></div>', unsafe_allow_html=True)
+def exercise_fill_blank(sentence_with_blank, answer):
+    st.write("📝 املأ الفراغ:")
+    st.info(sentence_with_blank)
+    user = st.text_input("أكمل الفراغ هنا:", key=f"fb_{random.randint(0,999999)}")
+    if st.button("تحقق ✅", key=f"fb_check_{random.randint(0,999999)}"):
+        if user.strip().lower() == answer.strip().lower():
+            add_message("bot", f"✅ ممتاز! الإجابة: `{answer}`")
+            add_xp(12)
+            st.success("✅ صحيح! +12 XP")
+            return True
         else:
-            st.markdown(f'<div class="msg-user">{m["text"]}<span class="msg-time"> {m["time"]}</span></div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+            lose_heart()
+            add_message("bot", f"❌ الإجابة الصحيحة: `{answer}`")
+            st.error(f"❌ خاطئ. الإجابة الصحيحة: {answer}. -1 قلب")
+            return False
 
-    st.write("")  # مسافة
+def exercise_order_words(target_sentence):
+    # نكسر الجملة لكلمات ونخلط ونطلب من المستخدم ترتيبها بالضغط
+    words = target_sentence.split()
+    shuffled = words[:]
+    random.shuffle(shuffled)
+    st.write("🧩 رتب الكلمات لتكوين الجملة الصحيحة:")
+    st.write("اضغط على الكلمات بالترتيب (ستظهر في الحقل أسفل)")
+    if "order_choice" not in st.session_state:
+        st.session_state.order_choice = []
+        st.session_state.order_shuffled = shuffled
+    col1, col2 = st.columns([3,2])
+    with col1:
+        for i, w in enumerate(st.session_state.order_shuffled):
+            if st.button(w, key=f"wordbtn_{i}_{random.randint(0,9999)}"):
+                st.session_state.order_choice.append(w)
+    with col2:
+        st.write("تشكيلك:")
+        st.write(" > " + " ".join(st.session_state.order_choice))
+        if st.button("مسح الترتيب", key=f"clear_ord_{random.randint(0,9999)}"):
+            st.session_state.order_choice = []
+    if st.button("تحقق الترتيب ✅", key=f"check_ord_{random.randint(0,9999)}"):
+        assembled = " ".join(st.session_state.order_choice)
+        if assembled.strip().lower() == target_sentence.strip().lower():
+            add_message("bot", f"✅ ترتيب ممتاز! `{target_sentence}`")
+            st.success("✅ صحيح! +18 XP")
+            add_xp(18)
+            st.session_state.order_choice = []
+            return True
+        else:
+            lose_heart()
+            add_message("bot", f"❌ لم يكن الترتيب صحيحاً. الإجابة الصحيحة: `{target_sentence}`")
+            st.error(f"❌ خاطئ. الإجابة الصحيحة: {target_sentence}. -1 قلب")
+            st.session_state.order_choice = []
+            return False
 
-    # صندوق الادخال (نستخدم فورم)
-    with st.form("chat_form", clear_on_submit=False):
-        user_input = st.text_input("...اكتب رسالتك (أو اضغط اقتراح)", value=st.session_state.input_text, key="input_box")
-        submitted = st.form_submit_button("✈️ إرسال")
-        if submitted and user_input.strip():
-            st.session_state.input_text = ""
-            # أضف رسالة المستخدم فوراً
-            add_message("user", user_input.strip())
-            # إذا هناك سؤال MCQ ظاهر، تحقق منه
-            cur_q = st.session_state.get("current_question")
-            if cur_q and cur_q["type"] == "mcq":
-                # إذا المستخدم كتب النص ويطلب مقارنة مع الإجابة
-                check_answer(user_input.strip())
-            else:
-                # رد بوت عام
-                reply = simple_bot_reply(user_input)
-                add_message("bot", reply)
+# ---------------------------
+# الواجهة الرئيسية
+# ---------------------------
+def header():
+    col1, col2 = st.columns([3,1])
+    with col1:
+        st.markdown("<h1 style='margin-bottom:0.2rem;'>🦉 البوت الشاب — تعلم الإنجليزية & الفرنسية</h1>", unsafe_allow_html=True)
+        st.markdown("<div class='small-muted'>اختَر اللغة ثم ابدأ الدرس — تجربة قصيرة ومرحة مثل Duolingo</div>", unsafe_allow_html=True)
+    with col2:
+        # Status card
+        st.markdown("<div class='sidebar-card'>", unsafe_allow_html=True)
+        st.markdown(f"<b>لغة:</b> {st.session_state.lang}<br><b>المستوى:</b> {st.session_state.level}<br><b>XP:</b> {st.session_state.xp} • <b>قلوب:</b> {'❤'*st.session_state.hearts}</div>", unsafe_allow_html=True)
+        st.markdown("", unsafe_allow_html=True)
 
-with cols[1]:
-    st.markdown("### ✨ اقتراحات سريعة")
-    # عرض الاقتراحات كأزرار
-    # نعرضها في شريطين عموديين
-    for i, s in enumerate(SUGGESTIONS):
-        if st.button(s, key=f"sugg_{i}", help="اضغط لإرسال/وضع في صندوق النص"):
-            # عند الضغط نضيف كرسالة مستخدم ونرد برد مناسب
+def sidebar():
+    st.sidebar.title("⚙️ الإعدادات السريعة")
+    lang_choice = st.sidebar.selectbox("اختر اللغة المراد تعلمها:", ["English", "French"], index=0 if st.session_state.lang=="English" else 1)
+    st.session_state.lang = lang_choice
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("الحالة")
+    st.sidebar.write(f"XP: {st.session_state.xp}")
+    st.sidebar.write(f"مستوى: {st.session_state.level}")
+    st.sidebar.write("قلوب: " + ("❤ " * st.session_state.hearts))
+    if st.sidebar.button("🔄 إعادة تعيين القلوب"):
+        reset_hearts()
+        st.sidebar.success("✅ تم إعادة تعيين القلوب")
+    if st.sidebar.button("📥 حفظ لقطة تقدم"):
+        save_progress_snapshot()
+        st.sidebar.success("✅ حفظت لقطة التقدم")
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("معلومات ومساعدة")
+    st.sidebar.write("هذا التطبيق تجريبي، مصمم لتعليم المفردات وقواعد بسيطة. يمكنك تطوير المحتوى بسرعة بإضافة دروس جديدة داخل LESSONS.")
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("اقتراحات سريعة")
+    # عرض عدد محدود من الاقتراحات
+    for s in SUGGESTIONS[:8]:
+        if st.sidebar.button(s, key=f"sug_{SUGGESTIONS.index(s)}"):
             add_message("user", s)
-            # توليد رد سريع
-            add_message("bot", simple_bot_reply(s))
-    st.write("---")
-    st.markdown("### 🎯 الدروس والاختبارات")
-    if st.button("ابدأ الدرس التالي"):
-        start_next_lesson()
+            handle_user_query(s)
 
-    # لو كان هناك سؤال MCQ فعلاً، عرض عناصر اختيارية للتحقق
-    q = st.session_state.get("current_question")
-    if q and q.get("type") == "mcq":
-        st.markdown(f"**السؤال:** {q['q']}")
-        choice = st.radio("اختر:", q["options"], key="mcq_choice")
-        if st.button("تحقق من الإجابة", key="check_mcq"):
-            # تحقق
-            check_answer(choice)
-    elif q and q.get("type") == "text":
-        st.markdown(f"**السؤال (اكتب نص):** {q['q']}")
-        txt = st.text_input("إجابتك هنا:", key="text_answer")
-        if st.button("تحقق من الإجابة (نص)", key="check_text"):
-            check_answer(txt)
+# ---------------------------
+# معالجة رسالة المستخدم (مركز التمارين)
+# ---------------------------
+def handle_user_query(text):
+    # البوت يفسر ويختار تمرين أو يرد إجابة سريعة
+    lang = st.session_state.lang
+    lower = text.strip().lower()
 
-    st.write("---")
-    st.markdown("### أدوات سريعة")
-    if st.button("أضف 10 نقاط (تجربة)"):
-        award_points(10)
-        add_message("bot", "✅ تم إعطاؤك 10 نقاط (تجربة).")
-    if st.button("احفظ محادثة كملف نصي"):
-        logtxt = "\n".join([f"[{m['time']}] {m['sender'].upper()}: {m['text']}" for m in st.session_state.messages])
-        st.download_button("تنزيل المحادثة", data=logtxt, file_name="chat.txt", mime="text/plain")
+    # بعض أوامر محددة:
+    if "اقترح" in lower or "اعطني" in lower or "علمني" in lower:
+        # مثال: اعطني 5 كلمات إنجليزية مفيدة
+        if "5 كلمات" in lower or "5 كلمات" in text:
+            # نجيب 5 كلمات عشوائية من دروس اللغة
+            words = []
+            for lesson in LESSONS[lang]:
+                words += [ex["target"] for ex in lesson["examples"]]
+            sample = random.sample(words, min(5, len(words)))
+            add_message("bot", f"✨ هنا 5 كلمات مفيدة ({lang}): " + ", ".join(sample))
+            return
 
-# -------------------------
-# نهاية الكود — ملاحظات مهمة
-# -------------------------
-st.markdown("<hr/>", unsafe_allow_html=True)
-st.markdown("<div style='text-align:center;color:rgba(255,255,255,0.7)'>ملاحظة: التقدّم محفوظ أثناء الجلسة. لإضافة محتوى ودروس أكثر، حدّث القاموس <code>COURSES</code> داخل الكود.</div>", unsafe_allow_html=True)
+    # تمرين عشوائي بسيط
+    choice = random.choice(["translate", "mc", "fill", "order", "sentence"])
+    if choice == "translate":
+        lesson, ex = pick_random_example(lang)
+        add_message("bot", f"📝 ترجمة: {ex['ar']} → ؟")
+        st.session_state.pending = {"type":"translate","ar":ex["ar"], "target":ex["target"]}
+    elif choice == "mc":
+        # multiple choice: نأخذ كلمة ونولد 3 خيارات خاطئة
+        lesson, ex = pick_random_example(lang)
+        correct = ex["target"]
+        # جمع المرشحات
+        pool = []
+        for ls in LESSONS[lang]:
+            pool += [e["target"] for e in ls["examples"]]
+        pool = list(set(pool))
+        pool.remove(correct)
+        wrongs = random.sample(pool, min(3, len(pool)))
+        choices = wrongs + [correct]
+        random.shuffle(choices)
+        add_message("bot", f"❓ اختر الترجمة الصحيحة لكلمة: {ex['ar']}")
+        st.session_state.pending = {"type":"mc","prompt":ex["ar"], "choices":choices, "correct":correct}
+    elif choice == "fill":
+        # pick sentence and replace word with blank
+        lesson = random.choice(LESSONS[lang])
+        sent = random.choice(lesson["sentences"])
+        target = sent["target"]
+        # اختار كلمة داخل target للفراغ (واحدة من الكلمات)
+        words = target.split()
+        idx = random.randint(0, len(words)-1)
+        answer = words[idx].strip(".,?")
+        blank_sentence = " ".join([("____" if i==idx else w) for i,w in enumerate(words)])
+        add_message("bot", f"🧩 املأ الفراغ: {blank_sentence}")
+        st.session_state.pending = {"type":"fill","sentence":blank_sentence,"answer":answer}
+    elif choice == "order":
+        lesson = random.choice(LESSONS[lang])
+        sent = random.choice(lesson["sentences"])
+        add_message("bot", f"🔀 رتب الجملة: {sent['ar']} → {sent['target']}")
+        st.session_state.pending = {"type":"order", "target":sent["target"]}
+    elif choice == "sentence":
+        # عرض جملة واطلب ترجمتها
+        lesson = random.choice(LESSONS[lang])
+        sent = random.choice(lesson["sentences"])
+        add_message("bot", f"🗣️ ترجم الجملة: {sent['ar']}")
+        st.session_state.pending = {"type":"translate","ar":sent["ar"], "target":sent["target"]}
+
+# ---------------------------
+# واجهة الدرس وواجهة المحادثة
+# ---------------------------
+
+def main_interface():
+    header()
+    sidebar()
+
+    # تخطيط الصفحة الرئيسي: يمين - لوحة الدردشة، يسار - اقتراحات/درس
+    left, right = st.columns([3,1])
+
+    with left:
+        # صندوق الدردشة
+        st.markdown("<div style='padding:10px; border-radius:12px; background: rgba(255,255,255,0.02);'>", unsafe_allow_html=True)
+        # عرض الرسائل
+        for msg in st.session_state.messages:
+            who = msg["who"]
+            cls = "user" if who=="user" else "bot"
+            content = msg["text"]
+            time = msg["time"]
+            if who == "user":
+                st.markdown(f"<div class='chat-bubble user'>{content}<div style='font-size:0.8rem; opacity:0.7; margin-top:6px'>{time}</div></div>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"<div class='chat-bubble bot'>{content}<div style='font-size:0.8rem; opacity:0.7; margin-top:6px'>{time}</div></div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # حقل إرسال المستخدم
+        user_input = st.text_input("اكتب رسالتك أو اضغط اقتراح:", key="user_text")
+        col1, col2 = st.columns([8,2])
+        with col1:
+            pass
+        with col2:
+            if st.button("✈️ إرسال"):
+                if user_input.strip():
+                    add_message("user", user_input)
+                    handle_user_query(user_input)
+                    st.session_state.user_text = ""
+                else:
+                    st.warning("اكتب شيئًا أو اختر اقتراحًا!")
+
+        st.markdown("---")
+        # إذا كان هناك تمرين قيد الانتظار، نعرضه
+        pending = st.session_state.get("pending", None)
+        if pending:
+            ptype = pending.get("type")
+            if ptype == "translate":
+                st.markdown("### 📝 تمرين: الترجمة")
+                st.info(f"ترجم: **{pending['ar']}**")
+                ans = st.text_input("✍️ اكتب الترجمة:", key=f"pending_translate_{random.randint(0,999999)}")
+                if st.button("تحقق من الترجمة ✅", key=f"pending_trans_btn_{random.randint(0,999999)}"):
+                    if ans.strip().lower() == pending["target"].strip().lower():
+                        add_message("bot", f"✅ أحسنت! الإجابة: `{pending['target']}`")
+                        add_xp(15)
+                        st.success("✅ صحيح! +15 XP")
+                        st.session_state.pending = None
+                    else:
+                        lose_heart()
+                        add_message("bot", f"❌ الإجابة الصحيحة: `{pending['target']}`")
+                        st.error(f"❌ خاطئ. الإجابة الصحيحة: {pending['target']}. -1 قلب")
+                        st.session_state.pending = None
+            elif ptype == "mc":
+                st.markdown("### ❓ تمرين: اختيار متعدد")
+                st.info(f"اختر الترجمة الصحيحة لـ: **{pending['prompt']}**")
+                choice = st.radio("الخيارات:", pending["choices"], key=f"pending_mc_{random.randint(0,999999)}")
+                if st.button("تحقق ✅", key=f"pending_mc_btn_{random.randint(0,999999)}"):
+                    if choice == pending["correct"]:
+                        add_message("bot", f"✅ ممتاز! `{pending['correct']}`")
+                        add_xp(10)
+                        st.success("✅ صحيح! +10 XP")
+                    else:
+                        lose_heart()
+                        add_message("bot", f"❌ الإجابة الصحيحة: `{pending['correct']}`")
+                        st.error(f"❌ خاطئ. الإجابة الصحيحة: {pending['correct']}. -1 قلب")
+                    st.session_state.pending = None
+            elif ptype == "fill":
+                st.markdown("### 🧩 تمرين: املأ الفراغ")
+                st.info(pending["sentence"])
+                ans = st.text_input("أكمل الفراغ:", key=f"pending_fill_{random.randint(0,999999)}")
+                if st.button("تحقق ✅", key=f"pending_fill_btn_{random.randint(0,999999)}"):
+                    if ans.strip().lower() == pending["answer"].strip().lower():
+                        add_message("bot", f"✅ أحسنت! الإجابة: `{pending['answer']}`")
+                        add_xp(12)
+                        st.success("✅ صحيح! +12 XP")
+                    else:
+                        lose_heart()
+                        add_message("bot", f"❌ الإجابة الصحيحة: `{pending['answer']}`")
+                        st.error(f"❌ خاطئ. الإجابة الصحيحة: {pending['answer']}. -1 قلب")
+                    st.session_state.pending = None
+            elif ptype == "order":
+                st.markdown("### 🔀 تمرين: رتب الكلمات")
+                st.info(f"قم بترتيب الجملة التالية بالإنجليزية/الفرنسية: (على شكل كلمات)")
+                target = pending["target"]
+                # نستعمل نفس دالة الترتيب لكن في واجهة بسيطة هنا
+                words = target.split()
+                shuffled = words[:]
+                random.shuffle(shuffled)
+                if "ord_tmp" not in st.session_state or st.session_state.get("ord_target")!=target:
+                    st.session_state.ord_tmp = []
+                    st.session_state.ord_shuffled = shuffled
+                    st.session_state.ord_target = target
+                cols = st.columns([1]*3)
+                # عرض أزرار
+                for i,w in enumerate(st.session_state.ord_shuffled):
+                    if cols[i%3].button(w, key=f"ordbtn_{i}_{random.randint(0,9999)}"):
+                        st.session_state.ord_tmp.append(w)
+                st.write("تشكيلك: " + " ".join(st.session_state.ord_tmp))
+                if st.button("مسح التشكيل"):
+                    st.session_state.ord_tmp = []
+                if st.button("تحقق الترتيب"):
+                    assembled = " ".join(st.session_state.ord_tmp).strip()
+                    if assembled.lower() == target.lower():
+                        add_message("bot", f"✅ ترتيب ممتاز! `{target}`")
+                        add_xp(18)
+                        st.success("✅ صحيح! +18 XP")
+                    else:
+                        lose_heart()
+                        add_message("bot", f"❌ الترتيب لم يكن صحيحًا. الصحيح: `{target}`")
+                        st.error(f"❌ خاطئ. الإجابة الصحيحة: {target}. -1 قلب")
+                    st.session_state.pending = None
+                    st.session_state.ord_tmp = []
+                    st.session_state.ord_shuffled = []
+            else:
+                # نوع غير معروف
+                add_message("bot", "خطأ داخلي: نوع تمرين غير معروف.")
+                st.session_state.pending = None
+
+    with right:
+        # لوحة جانبية: الدرس الحالي، اقتراحات سريعة، تقدم
+        st.markdown("<div class='sidebar-card'>", unsafe_allow_html=True)
+        st.subheader("🏁 الدرس السريع")
+        # اختيار الدرس من القائمة
+        lessons = LESSONS[st.session_state.lang]
+        lesson_titles = [f"{l['title']}" for l in lessons]
+        choice = st.selectbox("اختر درس:", lesson_titles, key="lesson_select")
+        st.session_state.current_lesson = lessons[lesson_titles.index(choice)]
+        st.markdown(f"**درس:** {st.session_state.current_lesson['title']}")
+        st.write("أمثلة كلمات (مقتطف):")
+        exs = st.session_state.current_lesson["examples"]
+        for ex in exs[:6]:
+            st.markdown(f"- `{ex['target']}` — {ex['ar']}")
+        st.markdown("---")
+        # Progress and actions
+        st.markdown("<div class='progress-box'>", unsafe_allow_html=True)
+        st.write(f"التقدّم في الدرس: {st.session_state.progress}%")
+        st.progress(min(100, max(0, st.session_state.progress)))
+        if st.button("ابدأ تمرين عشوائي"):
+            # نطلق تمرين
+            add_message("user", "ابدأ تمرين")
+            handle_user_query("ابدأ تمرين")
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("---")
+        st.subheader("✨ اقتراحات سريعة")
+        for i, s in enumerate(SUGGESTIONS[:12]):
+            if st.button(s, key=f"right_sug_{i}"):
+                add_message("user", s)
+                handle_user_query(s)
+        st.markdown("---")
+        st.subheader("🔧 أدوات")
+        if st.button("💾 تنزيل تقدم الجلسة"):
+            # نصيحة: نحفظ كـ JSON
+            snapshot = {
+                "messages": st.session_state.messages,
+                "history": st.session_state.history,
+                "stats": {
+                    "xp": st.session_state.xp,
+                    "level": st.session_state.level,
+                    "hearts": st.session_state.hearts,
+                    "lang": st.session_state.lang
+                }
+            }
+            bytes_out = BytesIO()
+            bytes_out.write(json.dumps(snapshot, ensure_ascii=False, indent=2).encode("utf-8"))
+            bytes_out.seek(0)
+            st.download_button("🔽 حمل ملف الجلسة (json)", data=bytes_out, file_name="session_snapshot.json", mime="application/json")
+        if st.button("♻️ إعادة ضبط كل شيء"):
+            # إعادة ضبط مع حفظ
+            save_progress_snapshot()
+            st.session_state.xp = 0
+            st.session_state.hearts = 5
+            st.session_state.level = 1
+            st.session_state.messages = []
+            st.session_state.pending = None
+            st.experimental_rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------------------
+# الصفحة الرئيسية / تشغيل
+# ---------------------------
+def run_app():
+    main_interface()
+
+# Start with a welcoming message at first run
+if len(st.session_state.messages) == 0:
+    add_message("bot", "مرحبًا بك! اختر اللغة واستخدم الاقتراحات أو اكتب سؤالك. أنا هنا أساعدك في تعلم الكلمات والجُمل والتمارين الخفيفة — تجربة سريعة مرحة مثل Duolingo 😊")
+    st.experimental_rerun()
+
+run_app()
