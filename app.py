@@ -1,14 +1,14 @@
 import streamlit as st
 import random
 
-# إعداد الصفحة
-st.set_page_config(page_title="منصة تعليمية مثل Duolingo", page_icon="🦉", layout="centered")
+# 🎨 إعدادات الصفحة
+st.set_page_config(page_title="منصتي التعليمية 🦉", page_icon="🦉", layout="centered")
 
-# 🎨 CSS للتصميم
+# 🌈 CSS للتصميم
 page_bg = """
 <style>
 .stApp {
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    background: linear-gradient(135deg, #6EE7B7, #3B82F6); /* أخضر + أزرق */
     color: white;
     font-family: "Cairo", sans-serif;
 }
@@ -17,25 +17,42 @@ h1, h2, h3, label {
     text-align: center;
 }
 .stButton button {
-    background-color: #00c6ff;
+    background-color: #22c55e;
     color: white;
     border-radius: 12px;
     font-weight: bold;
-    padding: 10px 20px;
+    padding: 12px 25px;
+    font-size: 18px;
     transition: 0.3s;
 }
 .stButton button:hover {
-    background-color: #0096c7;
+    background-color: #16a34a;
 }
 .stRadio label {
-    color: #fff !important;
+    color: #000 !important;
+    font-size: 20px;
+    background: #fff;
+    padding: 8px 12px;
+    border-radius: 10px;
+    margin: 5px;
+    display: block;
+}
+.score-box {
+    background-color: rgba(255,255,255,0.2);
+    padding: 12px;
+    border-radius: 15px;
+    margin: 10px 0;
+    text-align: center;
     font-size: 18px;
+}
+.heart {
+    font-size: 26px;
 }
 </style>
 """
 st.markdown(page_bg, unsafe_allow_html=True)
 
-# 🧠 بيانات الدروس (الإنجليزية والفرنسية)
+# 🧠 بيانات الدروس
 lessons = {
     "English": [
         {"question": "اختر الترجمة الصحيحة: قطة", "options": ["Cat", "Dog", "Car"], "answer": "Cat"},
@@ -49,13 +66,19 @@ lessons = {
     ]
 }
 
-# 🎯 حفظ الحالة
+# 🎯 حالة المستخدم
 if "score" not in st.session_state:
     st.session_state.score = 0
 if "step" not in st.session_state:
     st.session_state.step = 0
 if "lang" not in st.session_state:
     st.session_state.lang = None
+if "level" not in st.session_state:
+    st.session_state.level = 1
+if "xp" not in st.session_state:
+    st.session_state.xp = 0
+if "hearts" not in st.session_state:
+    st.session_state.hearts = 3  # ❤️ عدد المحاولات
 
 # 🏁 اختيار اللغة
 if st.session_state.lang is None:
@@ -76,7 +99,11 @@ else:
     progress = st.session_state.step / total_questions
     st.progress(progress)
 
-    if st.session_state.step < total_questions:
+    # عرض المستوى و XP + ❤️ قلوب
+    hearts_display = "❤️" * st.session_state.hearts + "🤍" * (3 - st.session_state.hearts)
+    st.markdown(f"<div class='score-box'>📊 المستوى: {st.session_state.level} | ⭐ XP: {st.session_state.xp} | <span class='heart'>{hearts_display}</span></div>", unsafe_allow_html=True)
+
+    if st.session_state.step < total_questions and st.session_state.hearts > 0:
         q = questions[st.session_state.step]
         st.header(f"📘 السؤال {st.session_state.step + 1} من {total_questions}")
         st.subheader(q["question"])
@@ -84,17 +111,29 @@ else:
 
         if st.button("تحقق ✅"):
             if choice == q["answer"]:
-                st.success("إجابة صحيحة 🎉")
+                st.success("إجابة صحيحة 🎉 +10 XP")
                 st.session_state.score += 1
+                st.session_state.xp += 10
             else:
                 st.error(f"إجابة خاطئة ❌، الصحيح هو: {q['answer']}")
+                st.session_state.hearts -= 1
             st.session_state.step += 1
             st.rerun()
     else:
         st.title("🏆 النتيجة النهائية")
         st.success(f"لقد أنهيت الاختبار! نتيجتك: {st.session_state.score}/{total_questions} 🎯")
+
+        if st.session_state.hearts == 0:
+            st.error("💔 انتهت المحاولات! حاول مرة أخرى")
+
+        # ترقية المستوى
+        if st.session_state.score == total_questions:
+            st.session_state.level += 1
+            st.success(f"🎉 مبروك! انتقلت إلى المستوى {st.session_state.level} 🆙")
+
         if st.button("🔄 إعادة المحاولة"):
             st.session_state.score = 0
             st.session_state.step = 0
             st.session_state.lang = None
+            st.session_state.hearts = 3
             st.rerun()
