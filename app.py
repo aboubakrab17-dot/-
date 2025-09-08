@@ -2,6 +2,7 @@ import streamlit as st
 from fpdf import FPDF
 import qrcode
 from io import BytesIO
+import tempfile
 
 # إعداد الصفحة
 st.set_page_config(page_title="مولد السيرة الذاتية", page_icon="📄", layout="centered")
@@ -17,15 +18,9 @@ page_bg = """
 h1, h2, h3, label {
     color: #fff !important;
 }
-.stTextInput > div > div > input {
-    background-color: #222;
-    color: white;
-    border-radius: 10px;
-    padding: 10px;
-}
-.stTextArea textarea {
-    background-color: #222;
-    color: white;
+.stTextInput > div > div > input, .stTextArea textarea, .stSelectbox div div, .stMultiSelect div div, .stRadio div {
+    background-color: #222 !important;
+    color: white !important;
     border-radius: 10px;
     padding: 10px;
 }
@@ -44,14 +39,32 @@ st.title("📄 مولد السيرة الذاتية الاحترافي")
 
 # 📌 مدخلات المستخدم
 name = st.text_input("👤 الاسم الكامل")
-job = st.text_input("💼 الوظيفة")
+
+# الوظيفة مع خيار أخرى
+job_options = ["مبرمج", "مصمم", "مسوق رقمي", "مدير مشاريع", "أخرى"]
+job = st.selectbox("💼 الوظيفة", job_options)
+if job == "أخرى":
+    job = st.text_input("✍️ اكتب وظيفتك")
+
 email = st.text_input("📧 البريد الإلكتروني")
 phone = st.text_input("📱 رقم الهاتف")
 address = st.text_input("📍 العنوان")
 about = st.text_area("📝 نبذة عنك")
-skills = st.text_area("⭐ المهارات (افصل بينهم بفواصل ,)")
+
+# المهارات Multiselect
+skills_list = ["Python", "JavaScript", "Photoshop", "Excel", "التواصل", "العمل الجماعي"]
+skills_selected = st.multiselect("⭐ المهارات", skills_list)
+extra_skills = st.text_input("➕ أضف مهارات أخرى (افصل بينهم بفواصل ,)")
+skills = ", ".join(skills_selected + extra_skills.split(",")) if extra_skills else ", ".join(skills_selected)
+
+# الخبرات
 experience = st.text_area("📂 الخبرات")
-education = st.text_area("🎓 التعليم")
+
+# التعليم Radio
+education_level = st.radio("🎓 المستوى التعليمي", ["ثانوي", "جامعي", "ماستر", "دكتوراه", "أخرى"])
+if education_level == "أخرى":
+    education_level = st.text_input("✍️ اكتب المستوى التعليمي")
+education = st.text_area("📘 تفاصيل التعليم")
 
 # 🎨 اختيار القالب
 template = st.selectbox("🎨 اختر القالب", ["كلاسيكي", "مودرن", "مبسط"])
@@ -102,15 +115,18 @@ if st.button("🚀 إنشاء السيرة الذاتية"):
         pdf.multi_cell(0, 10, f"📂 الخبرات:\n{experience}")
         pdf.ln(5)
 
-        pdf.multi_cell(0, 10, f"🎓 التعليم:\n{education}")
+        pdf.multi_cell(0, 10, f"🎓 التعليم:\n{education_level}\n{education}")
 
         # 📱 إضافة QR Code
         if generate_qr:
             qr_data = f"Name: {name}\nJob: {job}\nEmail: {email}\nPhone: {phone}\nAddress: {address}"
             qr_img = qrcode.make(qr_data)
-            buf = BytesIO()
-            qr_img.save(buf, format="PNG")
-            pdf.image(buf, x=160, y=10, w=40)
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+                qr_img.save(tmpfile, format="PNG")
+                qr_path = tmpfile.name
+
+            pdf.image(qr_path, x=160, y=10, w=40)
 
         # 📥 تحميل
         output = BytesIO()
