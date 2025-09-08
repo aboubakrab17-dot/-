@@ -1,293 +1,247 @@
 # app.py
-# تطبيق Streamlit: "أذكار - كتاب رقمي" (واجهة إسلامية، عرض كتب الأذكار بالكامل)
-# التعليمات: ضع ملف adhkar.json في نفس المجلد، ثم شغّل: streamlit run app.py
+# -*- coding: utf-8 -*-
 
-import streamlit as st
 import json
 from pathlib import Path
-from datetime import datetime
-import base64
+import streamlit as st
 
-st.set_page_config(page_title="أذكار - كتاب رقمي", page_icon="🌺", layout="wide")
+APP_TITLE = "📿 أذكاري – (حصن المسلم المصغّر)"
+DATA_FILE = Path(__file__).with_name("adhkar.json")
 
-# ---- CSS & خلفية وتصميم ----
-PAGE_BG = """
+# -----------------------------
+# تهيئة عامّة
+# -----------------------------
+st.set_page_config(page_title="أذكاري", page_icon="📿", layout="centered")
+
+# ثيم وخط عربي وخلفية
+st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+:root{
+  --card-bg: rgba(255,255,255,0.82);
+  --card-border: rgba(0,0,0,0.06);
+}
 html, body, [class*="css"]  {
-  font-family: 'Cairo', sans-serif;
+  font-family: 'Cairo', sans-serif !important;
 }
-
 .stApp {
-  background-image: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.05)), url('https://images.unsplash.com/photo-1505682634904-d7c8d5b1f0b7?auto=format&fit=crop&w=1400&q=60');
+  background: linear-gradient(135deg, #c9e6ff 0%, #a5d8ff 35%, #95d0ff 60%, #9ad0e8 100%),
+              url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=60');
+  background-attachment: fixed;
   background-size: cover;
-  color: #0b2340;
 }
-
-.header {
-  padding: 28px 40px;
-  border-radius: 12px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-  box-shadow: 0 6px 20px rgba(2,6,23,0.25);
-  margin-bottom: 18px;
+.block-container { padding-top: 1.2rem; padding-bottom: 4rem; }
+h1, h2, h3 { color:#0b2e4f; }
+.adk-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 1.1rem 1.1rem 0.8rem 1.1rem;
+  margin-bottom: 0.9rem;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.04);
 }
-
-.h-title {
-  font-size: 34px;
+.adk-title { font-weight: 800; font-size: 1.15rem; color:#0b2e4f; margin-bottom: .35rem; }
+.adk-meta { font-size: .86rem; color:#2f4c63; opacity:.85; margin-top:.3rem }
+.adk-text { font-size: 1.05rem; line-height: 2; direction: rtl; white-space: pre-wrap; }
+.adk-badge {
+  display:inline-block; padding:.2rem .55rem; border-radius:999px; background:#e8f4ff; 
+  border:1px solid #b5dbff; font-size:.8rem; margin-right:.4rem; color:#0b2e4f;
+}
+.grid-2 > div { width:100% }
+@media (min-width: 800px){
+  .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap: .8rem }
+}
+.stButton>button {
+  border-radius: 12px !important;
   font-weight: 700;
-  color: #06344b;
 }
-
-.h-sub {
-  color: #0a5566;
-  margin-top: 6px;
-  opacity: 0.95;
-}
-
-/* بطاقات الأقسام */
-.section-card {
-  background: rgba(255,255,255,0.85);
-  border-radius: 12px;
-  padding: 14px 18px;
-  margin: 8px 4px;
-  transition: transform .12s ease;
-  box-shadow: 0 6px 16px rgba(10,20,30,0.08);
-}
-.section-card:hover { transform: translateY(-4px); }
-
-/* عرض الكتاب */
-.book {
-  background: rgba(255,255,255,0.94);
-  border-radius: 14px;
-  padding: 18px;
-  box-shadow: 0 10px 30px rgba(5,10,20,0.12);
-  color: #062033;
-}
-
-.section-title {
-  font-size: 26px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-/* زر جميل */
-.big-btn{
-  background: linear-gradient(90deg,#3ad59f,#2ba6ff);
-  color: white;
-  padding: 10px 16px;
-  border-radius: 12px;
-  border: none;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* نص الأذكار */
-.adhkar-text {
-  font-size: 20px;
-  line-height: 1.8;
-  margin-bottom: 12px;
-}
-
-/* مرجع وفائدة */
-.meta {
-  color: #083542;
-  opacity: 0.85;
-  font-size: 14px;
-  margin-top: 6px;
-  margin-bottom: 18px;
-  background: rgba(10,20,20,0.02);
-  padding: 8px;
-  border-radius: 8px;
-}
-
-/* favorite badge */
-.fav {
-  padding: 6px 10px;
-  background: #ffdede;
-  border-radius: 8px;
-  font-weight: 600;
-  color: #7a1420;
-}
-
-.small {
-  font-size: 13px;
-  opacity: 0.85;
-  color: #043240;
-}
+.search-box input { border-radius: 999px !important; border: 1px solid #b5dbff !important; }
+.small { font-size:.86rem; opacity:.85 }
 </style>
-"""
+""", unsafe_allow_html=True)
 
-st.markdown(PAGE_BG, unsafe_allow_html=True)
-
-# ---- utils ----
-DATA_FILE = Path("adhkar.json")
-SAMPLE_FILE = Path("adhkar_sample.json")
-
-def load_data():
+# -----------------------------
+# تحميل البيانات
+# -----------------------------
+def load_data() -> dict:
     if DATA_FILE.exists():
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    elif SAMPLE_FILE.exists():
-        with open(SAMPLE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    else:
-        return {"sections": []}
+    # إن لم يوجد الملف (للاحتياط)
+    return {"sections": []}
 
-def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+DATA = load_data()
+SECTIONS = {sec["id"]: sec for sec in DATA.get("sections", [])}
 
-def to_download_link(obj, filename="download.json"):
-    b = json.dumps(obj, ensure_ascii=False, indent=2).encode("utf-8")
-    b64 = base64.b64encode(b).decode()
-    href = f'<a download="{filename}" href="data:application/json;base64,{b64}">⬇️ تحميل نسخة JSON</a>'
-    return href
+# -----------------------------
+# حالة التطبيق
+# -----------------------------
+def ensure_state():
+    st.session_state.setdefault("page", "home")           # home | section | favorites | search
+    st.session_state.setdefault("current_section", None)  # section id
+    st.session_state.setdefault("favs", set())            # set of (sec_id, index)
 
-# ---- session_state init ----
-if "section" not in st.session_state:
-    st.session_state.section = None
-if "favorites" not in st.session_state:
-    st.session_state.favorites = []
+ensure_state()
 
-data = load_data()
+def go(page: str, **kwargs):
+    st.session_state.page = page
+    for k, v in kwargs.items():
+        st.session_state[k] = v
+    st.rerun()
 
-# ---- Header / Intro ----
-with st.container():
-    col1, col2 = st.columns([3,1])
-    with col1:
-        st.markdown('<div class="header">', unsafe_allow_html=True)
-        st.markdown('<div class="h-title">🌺 أذكار — كتاب رقمي (حصن المصطفى)</div>', unsafe_allow_html=True)
-        st.markdown('<div class="h-sub">صَلِّ على النبي ﷺ — مرحباً بك! اختر فصلاً لتقرأه مباشرة على شكل كتاب. كل ذكر: نص + مرجع + فائدة.</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    with col2:
+# -----------------------------
+# أدوات مساعدة
+# -----------------------------
+def section_button(title: str, sec_id: str):
+    if st.button(f"📗 {title}", key=f"btn_{sec_id}"):
+        go("section", current_section=sec_id)
+
+def render_header():
+    st.write(f"### {APP_TITLE}")
+    st.caption("صَلِّ على النبي ﷺ — مرحبًا بك! اختر فصلًا لتقرأه مباشرة. يعرض كل ذكر: النص + المصدر + الفضل + عدد التكرار.")
+
+def render_search_box():
+    q = st.text_input("🔎 اكتب كلمة للبحث (مثال: 'أستغفر' أو 'سبحان الله')", key="q", placeholder="ابحث في جميع الأذكار…", label_visibility="collapsed")
+    return (q or "").strip()
+
+def render_section(sec):
+    st.markdown(f"### {sec['title']}")
+    st.button("⬅️ العودة للقائمة الرئيسية", on_click=lambda: go("home"), key=f"back_{sec['id']}")
+    st.download_button("⬇️ تحميل هذا القسم (JSON)", data=json.dumps(sec, ensure_ascii=False, indent=2),
+                       file_name=f"{sec['id']}.json", mime="application/json", key=f"dl_{sec['id']}")
+
+    st.write("")
+    items = sec.get("items", [])
+    for i, it in enumerate(items):
+        card_key = f"card_{sec['id']}_{i}"
+        fav_key = f"{sec['id']}::{i}"
+        is_fav = fav_key in st.session_state.favs
+
+        st.markdown('<div class="adk-card">', unsafe_allow_html=True)
+        st.markdown(f'<div class="adk-title">{it.get("title","")}</div>', unsafe_allow_html=True)
+
+        # شارات صغيرة
+        repeat = it.get("repeat", 1)
+        st.markdown(
+            f'<span class="adk-badge">🔁 التكرار: {repeat}</span>'
+            f' <span class="adk-badge">📚 المصدر</span> '
+            f'<span class="adk-badge">✨ الفضل</span>',
+            unsafe_allow_html=True
+        )
         st.write("")
-        if st.button("🏠 الرئيسية"):
-            st.session_state.section = None
+        st.markdown(f'<div class="adk-text">{it.get("text","")}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="adk-meta">📚 {it.get("source","")}<br>✨ {it.get("benefit","")}</div>', unsafe_allow_html=True)
 
-# ---- Sidebar: قائمة الأقسام + أدوات ----
-with st.sidebar:
-    st.header("القائمة")
-    st.write("تصفّح الأقسام أو حمّل/حرّر البيانات")
-    if st.button("⟳ إعادة تحميل البيانات"):
-        st.experimental_rerun()
-    st.markdown("---")
-    st.subheader("أقسام متاحة")
-    for sec in data.get("sections", []):
-        text = sec.get("title", "بدون عنوان")
-        if st.button(f"📖 {text}"):
-            st.session_state.section = sec["id"]
-    st.markdown("---")
-    st.subheader("أدوات")
-    st.markdown(to_download_link(data, filename="adhkar_export.json"), unsafe_allow_html=True)
-    st.markdown("**ملاحظة:** لتحميل/تعديل الأذكار، أنشئ/حرّر ملف `adhkar.json` في نفس المجلد حسب الصيغة الموضّحة في المستند.")
+        # أزرار المفضلة + عدّاد بسيط للتكرار
+        cols = st.columns([1,1.2, 6])
+        with cols[0]:
+            if st.button(("⭐️ إزالة من المفضلة" if is_fav else "☆ إضافة للمفضلة"), key=f"fav_{fav_key}"):
+                if is_fav:
+                    st.session_state.favs.discard(fav_key)
+                else:
+                    st.session_state.favs.add(fav_key)
+                st.rerun()
+        with cols[1]:
+            done_key = f"done_{fav_key}"
+            cnt = st.number_input("عدّاد", min_value=0, max_value=1000, value=0, key=done_key, label_visibility="collapsed")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-# ---- Main UI ----
-st.markdown("<div class='book'>", unsafe_allow_html=True)
+def render_home():
+    render_header()
 
-if st.session_state.section is None:
-    # عرض القائمة الرئيسية بشكل جذاب
+    # بحث سريع أعلى الصفحة
+    st.markdown('<div class="search-box">', unsafe_allow_html=True)
+    q = render_search_box()
+    st.markdown('</div>', unsafe_allow_html=True)
+    if q:
+        go("search", q=q)
+
     st.markdown("## 🌿 الأقسام المتوفرة")
-    cols = st.columns(2)
-    for i, sec in enumerate(data.get("sections", [])):
-        with cols[i % 2]:
-            st.markdown(f"""
-            <div class="section-card">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                  <div style="font-weight:700; font-size:18px;">{sec.get('title')}</div>
-                  <div class="small">{sec.get('subtitle', '')}</div>
-                </div>
-                <div style="text-align:right;">
-                  <div class="fav">{len(sec.get('items', []))} ذِكر</div>
-                </div>
-              </div>
-            </div>
-            """, unsafe_allow_html=True)
+    grid = st.container()
+    with grid:
+        cols = st.columns(2)
+        sec_list = list(SECTIONS.values())
+        for idx, sec in enumerate(sec_list):
+            with cols[idx % 2]:
+                section_button(sec["title"], sec["id"])
 
-    st.markdown("---")
-    st.markdown("### 🔎 البحث السريع في كل الأذكار")
-    q = st.text_input("اكتب كلمة للبحث (مثال: 'أستغفر' أو 'سبحان الله')", value="")
-    if q.strip():
-        found = []
-        ql = q.strip().lower()
-        for sec in data.get("sections", []):
-            for item in sec.get("items", []):
-                if ql in item.get("text", "").lower() or ql in item.get("title", "").lower():
-                    found.append((sec, item))
-        st.markdown(f"#### نتائج البحث ({len(found)})")
-        for sec, item in found:
-            st.markdown(f"**{sec['title']}** — **{item.get('title','')}**")
-            st.markdown(f"<div class='adhkar-text'>{item.get('text')}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='meta'>مرجع: {item.get('source','-')} · فائدة: {item.get('benefit','-')}</div>", unsafe_allow_html=True)
+    st.markdown("## 🔎 البحث السريع في كل الأذكار")
+    q2 = st.text_input("اكتب كلمة للبحث (مثال: 'أستغفر' أو 'سبحان الله')", key="q2", placeholder="ابحث في جميع الأقسام…")
+    if q2.strip():
+        go("search", q=q2.strip())
+
+    st.button("⭐️ المفضلات والموارد", on_click=lambda: go("favorites"))
+
+def render_search(q: str):
+    st.button("⬅️ رجوع", on_click=lambda: go("home"))
+    st.markdown(f"### نتائج البحث عن: **{q}**")
+
+    found = []
+    for sec in SECTIONS.values():
+        for i, it in enumerate(sec.get("items", [])):
+            blob = f"{it.get('title','')} {it.get('text','')} {it.get('source','')} {it.get('benefit','')}"
+            if q in blob:
+                found.append((sec, i, it))
+
+    if not found:
+        st.info("لا توجد نتائج مطابقة.")
+        return
+
+    for sec, i, it in found:
+        st.markdown('<div class="adk-card">', unsafe_allow_html=True)
+        st.markdown(f'<div class="adk-title">[{sec["title"]}] — {it["title"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="adk-text">{it["text"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="adk-meta">📚 {it.get("source","")}<br>✨ {it.get("benefit","")}</div>', unsafe_allow_html=True)
+        cols = st.columns([1,3])
+        with cols[0]:
+            if st.button("فتح القسم", key=f"open_{sec['id']}_{i}"):
+                go("section", current_section=sec["id"])
+        st.markdown("</div>", unsafe_allow_html=True)
+
+def render_favorites():
+    st.button("⬅️ رجوع", on_click=lambda: go("home"))
+    st.markdown("### ⭐️ المفضلات")
+    favs = sorted(list(st.session_state.favs))
+    if not favs:
+        st.info("لا توجد أذكار في المفضلة بعد.")
+        return
+    for fav in favs:
+        sec_id, idx = fav.split("::")
+        idx = int(idx)
+        sec = SECTIONS.get(sec_id)
+        if not sec: continue
+        it = sec["items"][idx]
+        st.markdown('<div class="adk-card">', unsafe_allow_html=True)
+        st.markdown(f'<div class="adk-title">[{sec["title"]}] — {it["title"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="adk-text">{it["text"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="adk-meta">📚 {it.get("source","")}<br>✨ {it.get("benefit","")}</div>', unsafe_allow_html=True)
+        if st.button("إزالة من المفضلة", key=f"rm_{fav}"):
+            st.session_state.favs.discard(fav)
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+# -----------------------------
+# التوجيه (Routing)
+# -----------------------------
+page = st.session_state.page
+
+if page == "home":
+    render_home()
+
+elif page == "section":
+    sec_id = st.session_state.get("current_section")
+    sec = SECTIONS.get(sec_id)
+    if not sec:
+        st.warning("القسم غير موجود.")
+        st.button("⬅️ رجوع", on_click=lambda: go("home"))
+    else:
+        render_section(sec)
+
+elif page == "search":
+    render_search(st.session_state.get("q", ""))
+
+elif page == "favorites":
+    render_favorites()
 
 else:
-    # عرض صفحة قسم كـكتاب (كل الأذكار تظهر دفعة واحدة)
-    sec = next((s for s in data.get("sections", []) if s["id"] == st.session_state.section), None)
-    if not sec:
-        st.error("القسم غير موجود")
-    else:
-        st.markdown(f"<div class='section-title'>{sec.get('title')}</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='small'>{sec.get('subtitle','')}</div>", unsafe_allow_html=True)
-        st.markdown("---")
-        # أزرار أعلى الصفحة
-        col_a, col_b, col_c = st.columns([1,2,1])
-        with col_a:
-            if st.button("🔙 الرجوع"):
-                st.session_state.section = None
-        with col_b:
-            if st.button("★ إضافة للمفضلات"):
-                if sec["id"] not in st.session_state.favorites:
-                    st.session_state.favorites.append(sec["id"])
-                    st.success("تمت الإضافة للمفضلات")
-                else:
-                    st.info("موجود بالفعل في المفضلات")
-        with col_c:
-            if st.button("⬇️ تنزيل القسم (JSON)"):
-                st.markdown(to_download_link(sec, filename=f"{sec['id']}.json"), unsafe_allow_html=True)
-
-        # عرض كل الأذكار داخل القسم (كتاب)
-        for idx, item in enumerate(sec.get("items", []), start=1):
-            st.markdown(f"<div style='margin-top:10px'></div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='font-weight:700; font-size:18px;'>{idx}. {item.get('title','')}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='adhkar-text'>{item.get('text','')}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='meta'>📚 المرجع: {item.get('source','غير محدد')} &nbsp; • &nbsp; ✅ الفائدة: {item.get('benefit','-')}</div>", unsafe_allow_html=True)
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-# ---- Footer: المفضلات وملفات التوثيق ----
-with st.expander("المفضلات والموارد"):
-    st.write("📌 المفضلات (الأقسام التي حفظتها):")
-    for fav in st.session_state.favorites:
-        sec = next((s for s in data.get("sections", []) if s["id"] == fav), None)
-        if sec:
-            st.write(f"- {sec['title']} ({len(sec.get('items',[]))} ذكر)")
-    st.markdown("---")
-    st.write("📝 ملاحظة مهمة عن المحتوى:")
-    st.write("""
-    * ضع نصوص الأذكار في ملف `adhkar.json` بنفس الصيغة المتّبعة بالأسفل (أنشأت ملف عيّنة `adhkar_sample.json`).
-    * إذا أردت إدراج نصوص مأخوذة من كتاب معين، تأكد من الترخيص أو استخدم نصوص أصلية/عربية مُعتمدة أو استشهد بالمصدر.
-    """)
-    st.markdown("---")
-    st.write("📂 صيغة JSON المطلوبة (مثال مختصر):")
-    st.code("""
-{
-  "sections": [
-    {
-      "id": "morning",
-      "title": "أذكار الصباح",
-      "subtitle": "أذكار الصباح من السنة",
-      "items": [
-        {
-          "title": "بسم الله الذي لا يضر",
-          "text": "بِسْمِ اللَّهِ الَّذِي لا يَضُرُّ...",
-          "source": "حديث - صحيح ...",
-          "benefit": "حماية من كل ضرر"
-        }
-      ]
-    }
-  ]
-}
-    """, language="json")
-
-# نهاية الملف
+    go("home")
