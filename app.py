@@ -1,100 +1,119 @@
 import streamlit as st
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import cm
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase import pdfmetrics
-import os
+from fpdf import FPDF
+import qrcode
+from io import BytesIO
 
-# 🔹 تسجيل خط عربي (تقدر تبدلو بخط آخر عندك)
-pdfmetrics.registerFont(TTFont('Arabic', 'arial.ttf'))
+# إعداد الصفحة
+st.set_page_config(page_title="مولد السيرة الذاتية", page_icon="📄", layout="centered")
 
-# 📄 إعداد الصفحة
-st.set_page_config(page_title="منشئ السيرة الذاتية", page_icon="📄", layout="centered")
+# CSS للتصميم
+page_bg = """
+<style>
+.stApp {
+    background: linear-gradient(135deg, #74ABE2, #5563DE);
+    color: white;
+    font-family: "Cairo", sans-serif;
+}
+h1, h2, h3, label {
+    color: #fff !important;
+}
+.stTextInput > div > div > input {
+    background-color: #222;
+    color: white;
+    border-radius: 10px;
+    padding: 10px;
+}
+.stTextArea textarea {
+    background-color: #222;
+    color: white;
+    border-radius: 10px;
+    padding: 10px;
+}
+.stButton button {
+    background-color: #00c6ff;
+    color: white;
+    border-radius: 12px;
+    font-weight: bold;
+}
+</style>
+"""
+st.markdown(page_bg, unsafe_allow_html=True)
 
-st.markdown(
-    """
-    <h1 style='text-align: center; color: #2E86C1;'>📄 منشئ السيرة الذاتية</h1>
-    <p style='text-align: center; font-size:18px; color: #117A65;'>
-    أدخل معلوماتك خطوة بخطوة، ثم أنشئ سيرتك الذاتية الاحترافية بنقرة واحدة 🚀
-    </p>
-    """,
-    unsafe_allow_html=True
-)
+# 📝 العنوان
+st.title("📄 مولد السيرة الذاتية الاحترافي")
 
-# 📌 المعلومات الشخصية
-st.header("🔹 المعلومات الشخصية")
-name = st.text_input("✍️ الاسم الكامل")
+# 📌 مدخلات المستخدم
+name = st.text_input("👤 الاسم الكامل")
+job = st.text_input("💼 الوظيفة")
 email = st.text_input("📧 البريد الإلكتروني")
-phone = st.text_input("📞 رقم الهاتف")
-address = st.text_area("📍 العنوان")
+phone = st.text_input("📱 رقم الهاتف")
+address = st.text_input("📍 العنوان")
+about = st.text_area("📝 نبذة عنك")
+skills = st.text_area("⭐ المهارات (افصل بينهم بفواصل ,)")
+experience = st.text_area("📂 الخبرات")
+education = st.text_area("🎓 التعليم")
 
-# 🎓 التعليم
-st.header("🔹 التعليم")
-degree = st.text_input("🎓 الشهادة")
-university = st.text_input("🏫 الجامعة")
-grad_year = st.text_input("📅 سنة التخرج")
+# 🎨 اختيار القالب
+template = st.selectbox("🎨 اختر القالب", ["كلاسيكي", "مودرن", "مبسط"])
 
-# 💼 الخبرات
-st.header("🔹 الخبرات العملية")
-job_title = st.text_input("💼 المسمى الوظيفي")
-company = st.text_input("🏢 الشركة")
-work_years = st.text_input("📆 المدة (من - إلى)")
+# 🖋️ اختيار الخط
+font_choice = st.selectbox("✍️ اختر الخط", ["Arial", "Times", "Courier"])
 
-# 🛠 المهارات
-st.header("🔹 المهارات")
-skills = st.text_area("⚡ اكتب مهاراتك (افصل بينها بفاصلة ,)")
+# 📱 QR Code
+generate_qr = st.checkbox("📱 إضافة QR Code بمعلوماتي")
 
-# 📸 صورة شخصية
-st.header("🔹 صورة شخصية")
-photo = st.file_uploader("⬆️ ارفع صورتك (اختياري)", type=["jpg", "png", "jpeg"])
-
-
-# ✅ إنشاء PDF
+# 🚀 زر إنشاء CV
 if st.button("🚀 إنشاء السيرة الذاتية"):
     if not name.strip():
-        st.error("⚠️ يرجى إدخال على الأقل الاسم!")
+        st.error("⚠️ اكتب اسمك على الأقل!")
     else:
-        pdf_file = "CV.pdf"
-        c = canvas.Canvas(pdf_file, pagesize=A4)
-        c.setFont("Arabic", 14)
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font(font_choice, "B", 18)
 
-        width, height = A4
-        y = height - 2 * cm
+        # خلفية خاصة بالقوالب
+        if template == "كلاسيكي":
+            pdf.set_fill_color(230, 230, 250)
+            pdf.rect(0, 0, 210, 297, "F")
+        elif template == "مودرن":
+            pdf.set_fill_color(200, 230, 255)
+            pdf.rect(0, 0, 210, 297, "F")
+        elif template == "مبسط":
+            pdf.set_fill_color(245, 245, 245)
+            pdf.rect(0, 0, 210, 297, "F")
 
-        # 📸 إضافة الصورة إذا موجودة
-        if photo:
-            img_path = "temp_photo.png"
-            with open(img_path, "wb") as f:
-                f.write(photo.read())
-            c.drawImage(img_path, width - 5*cm, y - 2*cm, 4*cm, 4*cm)
-            y -= 3 * cm
+        # 📝 المعلومات
+        pdf.set_text_color(0, 51, 102)
+        pdf.cell(200, 10, name, ln=True, align="C")
+        pdf.set_font(font_choice, "", 12)
+        pdf.cell(200, 10, job, ln=True, align="C")
+        pdf.ln(10)
 
-        # 📝 كتابة البيانات
-        c.drawString(2*cm, y, f"الاسم: {name}"); y -= 1*cm
-        c.drawString(2*cm, y, f"البريد الإلكتروني: {email}"); y -= 1*cm
-        c.drawString(2*cm, y, f"الهاتف: {phone}"); y -= 1*cm
-        c.drawString(2*cm, y, f"العنوان: {address}"); y -= 1.5*cm
+        pdf.set_text_color(0, 0, 0)
+        pdf.multi_cell(0, 10, f"📧 {email}\n📱 {phone}\n📍 {address}")
+        pdf.ln(5)
 
-        c.drawString(2*cm, y, "التعليم:"); y -= 1*cm
-        c.drawString(3*cm, y, f"{degree} - {university} ({grad_year})"); y -= 1.5*cm
+        pdf.multi_cell(0, 10, f"📝 نبذة:\n{about}")
+        pdf.ln(5)
 
-        c.drawString(2*cm, y, "الخبرات:"); y -= 1*cm
-        c.drawString(3*cm, y, f"{job_title} في {company} - {work_years}"); y -= 1.5*cm
+        pdf.multi_cell(0, 10, f"⭐ المهارات:\n{skills}")
+        pdf.ln(5)
 
-        c.drawString(2*cm, y, "المهارات:"); y -= 1*cm
-        for skill in skills.split(","):
-            c.drawString(3*cm, y, f"- {skill.strip()}")
-            y -= 0.8*cm
+        pdf.multi_cell(0, 10, f"📂 الخبرات:\n{experience}")
+        pdf.ln(5)
 
-        c.save()
+        pdf.multi_cell(0, 10, f"🎓 التعليم:\n{education}")
 
-        # 📥 تحميل الملف
-        with open(pdf_file, "rb") as f:
-            st.download_button("⬇️ تحميل السيرة الذاتية", f, file_name="CV.pdf")
+        # 📱 إضافة QR Code
+        if generate_qr:
+            qr_data = f"Name: {name}\nJob: {job}\nEmail: {email}\nPhone: {phone}\nAddress: {address}"
+            qr_img = qrcode.make(qr_data)
+            buf = BytesIO()
+            qr_img.save(buf, format="PNG")
+            pdf.image(buf, x=160, y=10, w=40)
 
-        st.success("✅ تم إنشاء السيرة الذاتية بنجاح!")
-
-        # 🧹 حذف الصورة المؤقتة
-        if photo:
-            os.remove(img_path)
+        # 📥 تحميل
+        output = BytesIO()
+        pdf.output(output, "F")
+        st.success("✅ تم إنشاء CV بنجاح!")
+        st.download_button("📥 تحميل السيرة الذاتية", data=output.getvalue(), file_name="CV.pdf", mime="application/pdf")
