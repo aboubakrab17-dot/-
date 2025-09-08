@@ -1,469 +1,293 @@
-# ----------------------------- #
-#         CV Builder App        #
-#    Streamlit + FPDF + PIL     #
-#   By: بوتك الشاب – نسخة خفيفة  #
-# ----------------------------- #
-
+# app.py
+import os
 import io
-import re
-from datetime import datetime
-
-import streamlit as st
-from fpdf import FPDF
+import requests
 from PIL import Image
+import streamlit as st
 
-# ----------------------------- #
-# إعداد الصفحة والستايل
-# ----------------------------- #
-st.set_page_config(
-    page_title="CV صانع",
-    page_icon="🧾",
-    layout="centered",
-    initial_sidebar_state="collapsed",
-)
+# PDF libs
+from fpdf import FPDF
+import arabic_reshaper
+from bidi.algorithm import get_display
 
-# خلفية متدرجة + تنسيق عناصر (واتساب ستايل)
-CSS = """
-<style>
-/* خلفية */
-.stApp {
-  background: linear-gradient(135deg, #111827 0%, #0b1730 40%, #132a4a 100%);
-  color: #e5e7eb;
-  font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
-}
+# ---- SETTINGS ----
+st.set_page_config(page_title="CV Builder — بوت السيفي", layout="centered", page_icon="📄")
 
-/* العنوان */
-h1,h2,h3 { color: #e6f0ff !important; }
+# Create fonts folder
+FONTS_DIR = "fonts"
+os.makedirs(FONTS_DIR, exist_ok=True)
 
-/* كارت الدردشة */
-.chat-card {
-  background: #0f172a;
-  border: 1px solid #21324d;
-  border-radius: 18px;
-  padding: 16px 18px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.25);
-}
+# Try to download a good Arabic TTF if missing
+FONT_NAME = "NotoNaskhArabic-Regular.ttf"
+FONT_PATH = os.path.join(FONTS_DIR, FONT_NAME)
+FONT_URL = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf"
 
-/* فقاعة المستخدم */
-.bubble-me {
-  background: #c9f7c1;
-  color: #0f172a;
-  border-radius: 14px;
-  padding: 12px 14px;
-  margin: 8px 0;
-  max-width: 92%;
-}
+def ensure_font():
+    if os.path.exists(FONT_PATH) and os.path.getsize(FONT_PATH) > 10000:
+        return True
+    try:
+        r = requests.get(FONT_URL, timeout=20)
+        if r.status_code == 200:
+            with open(FONT_PATH, "wb") as f:
+                f.write(r.content)
+            return True
+    except Exception:
+        return False
+    return False
 
-/* فقاعة البوت */
-.bubble-bot {
-  background: #e8f0ff;
-  color: #0b1730;
-  border-radius: 14px;
-  padding: 12px 14px;
-  margin: 8px 0;
-  max-width: 92%;
-  border: 1px solid #c6d6ff;
-}
+font_ok = ensure_font()
 
-/* أزرار */
-.stButton>button {
-  background: linear-gradient(135deg,#2563eb,#0ea5e9);
-  border: 0;
-  color: white;
-  padding: 10px 16px;
-  border-radius: 14px;
-  font-weight: 600;
-  box-shadow: 0 8px 16px rgba(14,165,233,.25);
-}
-.stButton>button:hover { filter: brightness(1.06); }
+# helpers for Arabic shaping
+def shape_text(text):
+    try:
+        reshaped = arabic_reshaper.reshape(text)
+        bidi_text = get_display(reshaped)
+        return bidi_text
+    except Exception:
+        # fallback: return original
+        return text
 
-/* حقول الإدخال */
-.stTextInput>div>div>input,
-.stTextArea>div>div>textarea,
-.stNumberInput>div>div>input {
-  background: #0f172a !important;
-  color: #e5e7eb !important;
-  border-radius: 12px;
-  border: 1px solid #23324c !important;
-}
+# helper to check if any arabic chars
+def has_arabic(s):
+    return any("\u0600" <= ch <= "\u06FF" or "\u0750" <= ch <= "\u077F" for ch in s)
 
-/* شارة صغيرة */
-.badge {
-  display:inline-block;
-  background:#1f2937;
-  border:1px solid #334155;
-  color:#d1d5db;
-  padding:5px 10px;
-  border-radius:999px;
-  font-size:12px;
-  margin:2px;
-}
-</style>
-"""
-st.markdown(CSS, unsafe_allow_html=True)
-
-# ----------------------------- #
-# الحالة العامة
-# ----------------------------- #
-if "step" not in st.session_state: st.session_state.step = 1
-if "data" not in st.session_state:
-    st.session_state.data = {
-        "name": "",
-        "title": "",
-        "email": "",
-        "phone": "",
-        "location": "",
-        "summary": "",
-        "skills": [],
-        "languages": [],
-        "experience": [],   # كل عنصر dict: {"role","company","period","details"}
-        "education": [],    # {"degree","school","year"}
-        "projects": [],     # {"name","link","desc"}
-        "links": [],        # {"label","url"}
-    }
-
-def add_badge(text):
-    st.markdown(f"<span class='badge'>{text}</span>", unsafe_allow_html=True)
-
-# ----------------------------- #
-# شريط علوي
-# ----------------------------- #
-st.markdown(
-    "<div class='chat-card'><h1>🧾 صانع السيرة — ستايل واتساب</h1>"
-    "<p>جاوب خطوة بخطوة، وزّر <strong>إنشاء PDF</strong> في الأخير. الكتابة كبيرة وواضحة، وكل شيء بسيط وسريع ✨</p>"
-    "</div>",
-    unsafe_allow_html=True,
-)
-
-# ----------------------------- #
-# معاينة فورية (يمين/يسار)
-# ----------------------------- #
-left, right = st.columns([1.05, 0.95])
-
-with right:
-    st.markdown("<div class='chat-card'>", unsafe_allow_html=True)
-    st.subheader("👀 معاينة سريعة")
-    d = st.session_state.data
-    if d["name"]:
-        st.markdown(f"<div class='bubble-me'><b>{d['name']}</b> — {d.get('title','')}</div>", unsafe_allow_html=True)
-    if d["summary"]:
-        st.markdown(f"<div class='bubble-bot'>{d['summary']}</div>", unsafe_allow_html=True)
-    if d["skills"]:
-        st.markdown("**المهارات:** " + "، ".join(d["skills"]))
-    if d["languages"]:
-        st.markdown("**اللغات:** " + "، ".join(d["languages"]))
-    if d["experience"]:
-        st.markdown("**الخبرات:**")
-        for x in d["experience"]:
-            st.markdown(f"- **{x['role']}** @ {x['company']} — _{x['period']}_")
-    if d["education"]:
-        st.markdown("**التعليم:**")
-        for x in d["education"]:
-            st.markdown(f"- **{x['degree']}** — {x['school']} ({x['year']})")
-    if d["projects"]:
-        st.markdown("**المشاريع:**")
-        for x in d["projects"]:
-            link = f" — [{x['link']}]({x['link']})" if x['link'] else ""
-            st.markdown(f"- **{x['name']}**{link}: {x['desc']}")
-    if d["links"]:
-        st.markdown("**روابط:**")
-        for x in d["links"]:
-            st.markdown(f"- [{x['label']}]({x['url']})")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ----------------------------- #
-# اقتراحات سريعة (50 اقتراح)
-# ----------------------------- #
+# suggestions list (50) -- for "quick fill"
 SUGGESTIONS = [
-"اكتب ملخص مهني قصير", "أضف 6 مهارات تقنية", "أضف 6 مهارات شخصية",
-"أضف تجربة عمل: مصمم واجهات", "أضف تجربة عمل: مطور باك", "أضف تجربة عمل: خدمة زبائن",
-"أضف مشروع ويب شخصي", "أضف مشروع متجر إلكتروني", "أضف مشروع بوت دردشة",
-"أضف تعليم: ليسانس إعلام آلي", "أضف تعليم: ماستر إدارة أعمال", "أضف تعليم: تقني سامي",
-"أضف لغة: العربية ممتاز", "أضف لغة: الإنجليزية جيد جداً", "أضف لغة: الفرنسية متوسط",
-"أضف رابط GitHub", "أضف رابط LinkedIn", "أضف بريد إلكتروني",
-"أضف رقم هاتف", "أضف مدينة الإقامة", "أضف لقب وظيفي مناسب",
-"نظّم المهارات في فئات", "اكتب إنجازات بالأرقام", "اختصر الملخص لـ 3 أسطر",
-"أضف مشروع ذكاء اصطناعي", "أضف مشروع تطبيق جوال", "أضف مشروع تحليل بيانات",
-"أضف قسم دورات/شهادات", "أضف قسم الجوائز", "أضف قسم الهوايات",
-"رتّب الخبرات من الأحدث للأقدم", "احذف الحشو الزائد", "استخدم لغة عملية",
-"أضف كلمات مفتاحية للوظيفة", "راجع الإملاء", "أضف رابط سيرة على الويب",
-"أضف مشروع بفريق", "أضف مسؤوليات واضحة", "أضف تقنيات مستخدمة",
-"أضف قسم التطوع", "أضف قسم نشاطات", "أضف هدف وظيفي قصير",
-"أضف مراجع عند الطلب", "أضف شهادة Google", "أضف شهادة AWS",
-"أضف مهارات Office", "أضف مهارات تواصل", "أضف مهارات تنظيم",
-"أضف مهارات قيادية", "أضف مهارات حل المشاكل"
+    "مهندس برمجيات مبتدئ", "مطور ويب (Frontend)", "مطور ويب (Fullstack)",
+    "مطور بايثون", "متدرب في تكنولوجيا المعلومات", "مصمم جرافيك إبداعي",
+    "متخصص تسويق رقمي", "مدير مشاريع صغير", "محلل بيانات مبتدئ",
+    "مهندس شبكات", "مطور تطبيقات أندرويد", "مطور iOS مبتدئ",
+    "مصمم واجهات المستخدم UI/UX", "كاتب محتوى رقمي", "مترجم لغات",
+    "محاسب مبتدئ", "موظف خدمة زبائن محترف", "بائع ميداني",
+    "مصمم شعارات", "فريلانسر في تطوير الويب", "مساعد إداري",
+    "مهندس إلكترونيات", "مختص صيانة حواسيب", "مدرب لغات",
+    "باحث بازار", "مصور فوتوغرافي", "فيديوغرافر", "مشرف متجر الكتروني",
+    "مندوب مبيعات", "مساعد تسويق", "مختص SEO/SEM", "مصمم موشن جرافيك",
+    "مطور ألعاب مبتدئ", "مختص أمن معلومات", "مراقب جودة برمجيات",
+    "أخصائي موارد بشرية", "محلل نظم", "مهندس تعلم آلي مبتدئ",
+    "مزارع تجريبي", "مهندس صوت", "منسق فعاليات", "كاتِب سيناريو",
+    "مستشار صغير أعمال", "مطور روبوتات", "فنان رقمي", "مساعد قانوني",
+    "مترجم تقني", "مشرف إنتاج"
 ]
 
-with left:
-    st.markdown("<div class='chat-card'>", unsafe_allow_html=True)
-    st.subheader("💡 اقتراحات سريعة")
-    cols = st.columns(2)
-    for i, s in enumerate(SUGGESTIONS):
-        with cols[i % 2]:
-            if st.button(s, key=f"sug{i}"):
-                # مجرد حشو ذكي بسيط حسب النص
-                if "مهارات" in s:
-                    st.session_state.data["skills"] = list(set(st.session_state.data["skills"] + ["Teamwork","Problem Solving","Time Management","Communication","Creativity","Adaptability"]))
-                elif s.startswith("أضف لغة"):
-                    lang = s.split(":")[-1].strip()
-                    st.session_state.data["languages"] = list(set(st.session_state.data["languages"] + [lang]))
-                elif "GitHub" in s:
-                    st.session_state.data["links"].append({"label":"GitHub","url":"https://github.com/username"})
-                elif "LinkedIn" in s:
-                    st.session_state.data["links"].append({"label":"LinkedIn","url":"https://linkedin.com/in/username"})
-                elif "بريد" in s:
-                    st.session_state.data["email"] = "yourmail@example.com"
-                elif "رقم" in s:
-                    st.session_state.data["phone"] = "+213 555 000 000"
-                elif "مدينة" in s:
-                    st.session_state.data["location"] = "Algiers, Algeria"
-                elif "لقب وظيفي" in s:
-                    st.session_state.data["title"] = "Frontend Developer"
-                elif "ملخص" in s:
-                    st.session_state.data["summary"] = "مطور واجهات أمامية شغوف، خبرة في React و Tailwind، أركز على الأداء وتجربة المستخدم وإنجاز المهام بسرعة وبجودة."
-                elif "تعليم" in s:
-                    st.session_state.data["education"].append({"degree":"BSc Computer Science","school":"University","year":"2023"})
-                elif "مشروع" in s:
-                    st.session_state.data["projects"].append({"name":"Portfolio Website","link":"https://example.com","desc":"موقع شخصي يعرض الأعمال والتقنيات المستعملة."})
-                elif "خبرة" in s:
-                    st.session_state.data["experience"].append({"role":"UI/UX Designer","company":"Creative Co.","period":"2022 - 2023","details":"تصميم واجهات تفاعلية وتحسين تجربة المستخدم."})
-    st.markdown("</div>", unsafe_allow_html=True)
+# UI: custom CSS for background and "chat style"
+BG_URL = "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1400&q=80"
+st.markdown(f"""
+    <style>
+    .stApp {{
+        background-image: url('{BG_URL}');
+        background-size: cover;
+        background-attachment: fixed;
+    }}
+    .card {{
+        background: rgba(255,255,255,0.95);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    }}
+    .chat-bubble-me {{
+        background: #dcf8c6;
+        padding: 12px 16px;
+        border-radius: 18px;
+        display:inline-block;
+        max-width: 85%;
+        margin-bottom:6px;
+        font-size:16px;
+    }}
+    .chat-bubble-bot {{
+        background: #e8f0ff;
+        padding: 12px 16px;
+        border-radius: 18px;
+        display:inline-block;
+        max-width: 85%;
+        margin-bottom:6px;
+        font-size:16px;
+    }}
+    .muted {{ color: #666; font-size:14px; }}
+    </style>
+    """, unsafe_allow_html=True)
 
-# ----------------------------- #
-# نموذج الخطوات (Wizard)
-# ----------------------------- #
-with left:
-    st.markdown("<div class='chat-card'>", unsafe_allow_html=True)
-    st.subheader(f"🧩 الخطوة {st.session_state.step} / 5")
+st.title("📄 CV Builder — أنشئ سيفيك بثواني")
+st.write("بسيط، جميل، يدعم العربي ويخرج PDF جاهز للطباعة. اختر اقتراح من القائمة أو اكتب وصِفك الخاص.")
 
-    d = st.session_state.data
-    step = st.session_state.step
+with st.container():
+    col1, col2 = st.columns([1, 1])
 
-    if step == 1:
-        st.markdown("### 👤 المعلومات الأساسية")
-        d["name"] = st.text_input("الاسم الكامل", d["name"])
-        d["title"] = st.text_input("المسمى الوظيفي (اختياري)", d["title"])
-        cols = st.columns(2)
-        d["email"] = cols[0].text_input("البريد الإلكتروني", d["email"])
-        d["phone"] = cols[1].text_input("الهاتف", d["phone"])
-        d["location"] = st.text_input("المدينة / الدولة", d["location"])
+    with col1:
+        st.subheader("معلومات أساسية")
+        name = st.text_input("الاسم الكامل", value="أسمك هنا")
+        title = st.text_input("المسمى الوظيفي", value="مطور / مصمم ...")
+        contact = st.text_input("بريد إلكتروني أو هاتف", value="example@mail.com")
+        location = st.text_input("المدينة / البلد", value="الجزائر")
+        photo = st.file_uploader("صورة شخصية (اختياري)", type=["png","jpg","jpeg"])
 
-    elif step == 2:
-        st.markdown("### 🧠 ملخص مهني")
-        d["summary"] = st.text_area("اكتب 2–4 أسطر عن نفسك", d["summary"], height=120)
+        st.subheader("نبذة قصيرة")
+        # suggestions selector
+        suggested = st.selectbox("اختر من الاقتراحات الجاهزة (أو اكتب)", ["— اختر اقتراح —"] + SUGGESTIONS)
+        if suggested and suggested != "— اختر اقتراح —":
+            default_summary = f"{suggested} — أبحث عن فرصة لتطبيق مهاراتي وتعلم المزيد."
+        else:
+            default_summary = "اكتب نبذة قصيرة عن نفسك هنا..."
+        summary = st.text_area("النبذة (ملخص قصير)", value=default_summary, height=120)
 
-        st.markdown("### 🧰 المهارات")
-        skills_str = ", ".join(d["skills"])
-        skills_str = st.text_input("أضف مهارات مفصولة بفواصل", skills_str, placeholder="Python, React, Teamwork ...")
-        d["skills"] = [s.strip() for s in skills_str.split(",") if s.strip()]
+    with col2:
+        st.subheader("الخبرات والتعليم")
+        st.write("أضف كل خبرة في سطر جديد، استخدم ( - ) للفصل بين العنوان والوصف.")
+        experiences = st.text_area("الخبرات (كل سطر: منصب | شركة | الفترة | وصف قصير)", 
+                                   value="مطور ويب | شركة مثال | 2022-الآن | تطوير واجهات المستخدم",
+                                   height=220)
 
-        st.markdown("### 🌍 اللغات")
-        langs_str = ", ".join(d["languages"])
-        langs_str = st.text_input("أضف لغات مفصولة بفواصل", langs_str, placeholder="Arabic, English, French ...")
-        d["languages"] = [s.strip() for s in langs_str.split(",") if s.strip()]
+        st.write("التعليم (سطر لكل سجل)")
+        education = st.text_area("التعليم", value="بكالوريوس علوم حاسوب | جامعة ... | 2020", height=120)
 
-    elif step == 3:
-        st.markdown("### 💼 الخبرات")
-        with st.form("exp_form", clear_on_submit=True):
-            role = st.text_input("المسمى الوظيفي")
-            company = st.text_input("الشركة")
-            period = st.text_input("الفترة (مثال: 2021 - 2023)")
-            details = st.text_area("تفاصيل/إنجازات مختصرة", height=90)
-            submitted = st.form_submit_button("➕ إضافة خبرة")
-        if submitted and role and company:
-            d["experience"].append({"role": role, "company": company, "period": period, "details": details})
-        for i, x in enumerate(d["experience"]):
-            st.markdown(f"- **{x['role']}** @ {x['company']} — _{x['period']}_")
-            if st.button("🗑️ حذف", key=f"del_exp_{i}"):
-                d["experience"].pop(i)
-                st.experimental_rerun()
+        st.write("المهارات (افصل بفاصلة)")
+        skills = st.text_input("المهارات", value="Python, HTML, CSS, JavaScript")
 
-    elif step == 4:
-        st.markdown("### 🎓 التعليم")
-        with st.form("edu_form", clear_on_submit=True):
-            degree = st.text_input("الشهادة/الدرجة")
-            school = st.text_input("المؤسسة")
-            year = st.text_input("العام")
-            submitted = st.form_submit_button("➕ إضافة تعليم")
-        if submitted and degree and school:
-            d["education"].append({"degree": degree, "school": school, "year": year})
-        for i, x in enumerate(d["education"]):
-            st.markdown(f"- **{x['degree']}** — {x['school']} ({x['year']})")
-            if st.button("🗑️ حذف", key=f"del_edu_{i}"):
-                d["education"].pop(i)
-                st.experimental_rerun()
+# extra
+st.markdown("---")
+st.subheader("تفاصيل إضافية (اختياري)")
+languages = st.text_input("اللغات (مثال: العربية - متقن، الإنجليزية - جيد)", value="العربية - متقن, الإنجليزية - جيد")
+hobbies = st.text_input("الهوايات / الاهتمامات", value="تصميم، موسيقى، قراءة")
+links = st.text_input("روابط مهمة (LinkedIn, GitHub)", value="https://github.com/username")
 
-    elif step == 5:
-        st.markdown("### 🧪 المشاريع والروابط")
-        with st.form("proj_form", clear_on_submit=True):
-            name = st.text_input("اسم المشروع")
-            link = st.text_input("رابط (اختياري)")
-            desc = st.text_area("وصف مختصر", height=80)
-            submitted = st.form_submit_button("➕ إضافة مشروع")
-        if submitted and name:
-            d["projects"].append({"name": name, "link": link, "desc": desc})
-
-        with st.form("link_form", clear_on_submit=True):
-            label = st.text_input("اسم الرابط (GitHub, LinkedIn ...)")
-            url = st.text_input("الرابط")
-            submitted2 = st.form_submit_button("➕ إضافة رابط")
-        if submitted2 and label and url:
-            d["links"].append({"label": label, "url": url})
-
-        st.markdown("#### الروابط الحالية")
-        for i, x in enumerate(d["links"]):
-            st.markdown(f"- **{x['label']}** — {x['url']}")
-            if st.button("🗑️ حذف", key=f"del_link_{i}"):
-                d["links"].pop(i)
-                st.experimental_rerun()
-
-    st.write("")
-    c1, c2, c3 = st.columns(3)
-    if step > 1 and c1.button("⬅️ السابق"):
-        st.session_state.step -= 1
-        st.experimental_rerun()
-    if step < 5 and c3.button("التالي ➡️"):
-        st.session_state.step += 1
-        st.experimental_rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ----------------------------- #
-# توليد PDF (أساسي)
-# ملاحظة: FPDF لا يدعم العربية بشكل كامل بدون ملف خط TTF.
-# سيعمل جيدًا مع الحروف اللاتينية/الأرقام. للنصوص العربية،
-# يمكن إضافة خط TTF لاحقًا (ميزة اختيارية).
-# ----------------------------- #
-def make_pdf(data: dict) -> bytes:
-    pdf = FPDF(format="A4", unit="mm")
-    pdf.add_page()
+# generate PDF
+def build_pdf_bytes(data: dict) -> bytes:
+    pdf = FPDF(format='A4')
     pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    # register font
+    used_font = None
+    try:
+        if font_ok:
+            pdf.add_font("NotoArabic", "", FONT_PATH, uni=True)
+            used_font = "NotoArabic"
+        else:
+            # try default DejaVu (if available) else fallback to Arial (not Arabic-safe)
+            pdf.add_font("DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True)
+            used_font = "DejaVu"
+    except Exception:
+        used_font = None
 
-    # ألوان
-    PRIMARY = (37, 99, 235)  # أزرق
-    pdf.set_fill_color(*PRIMARY)
-    pdf.rect(0, 0, 210, 35, "F")
+    # Header - name
+    if used_font:
+        pdf.set_font(used_font, size=20)
+    else:
+        pdf.set_font("Arial", size=20)
+    # Name may be Arabic -> shape if needed
+    name_print = shape_text(data["name"]) if has_arabic(data["name"]) else data["name"]
+    pdf.cell(0, 10, txt=name_print, ln=True)
 
-    # العنوان
-    pdf.set_xy(10, 10)
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", "B", 18)
-    name_line = (data.get("name") or "Your Name")
-    title_line = (data.get("title") or "")
-    pdf.cell(0, 7, name_line, ln=1)
-    pdf.set_font("Helvetica", "", 12)
-    pdf.cell(0, 6, title_line, ln=1)
+    # title & contact
+    if used_font:
+        pdf.set_font(used_font, size=12)
+    else:
+        pdf.set_font("Arial", size=12)
+    title_print = shape_text(data["title"]) if has_arabic(data["title"]) else data["title"]
+    contact_print = shape_text(data["contact"]) if has_arabic(data["contact"]) else data["contact"]
+    location_print = shape_text(data["location"]) if has_arabic(data["location"]) else data["location"]
 
-    # معلومات الاتصال
-    pdf.ln(8)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.cell(0, 8, "Contact", ln=1)
-    pdf.set_font("Helvetica", "", 11)
-    contact = []
-    if data.get("email"): contact.append(f"Email: {data['email']}")
-    if data.get("phone"): contact.append(f"Phone: {data['phone']}")
-    if data.get("location"): contact.append(f"Location: {data['location']}")
-    for c in contact:
-        pdf.multi_cell(0, 6, c)
+    pdf.multi_cell(0, 6, f"{title_print} · {contact_print} · {location_print}")
+    pdf.ln(4)
 
-    # الملخص
-    if data.get("summary"):
-        pdf.ln(4)
-        pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 8, "Summary", ln=1)
-        pdf.set_font("Helvetica", "", 11)
-        pdf.multi_cell(0, 6, data["summary"])
+    # Summary section
+    if used_font:
+        pdf.set_font(used_font, size=12)
+    else:
+        pdf.set_font("Arial", size=12)
+    pdf.cell(0, 6, txt=shape_text("النبذة:") if has_arabic("النبذة:") else "Summary:", ln=True)
+    summary_print = shape_text(data["summary"]) if has_arabic(data["summary"]) else data["summary"]
+    pdf.multi_cell(0, 6, summary_print)
+    pdf.ln(6)
 
-    # المهارات
-    if data.get("skills"):
-        pdf.ln(4)
-        pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 8, "Skills", ln=1)
-        pdf.set_font("Helvetica", "", 11)
-        pdf.multi_cell(0, 6, " • " + " | ".join(data["skills"]))
+    # Experiences
+    pdf.set_font(used_font if used_font else "Arial", size=12)
+    pdf.cell(0, 6, txt=shape_text("الخبرة العملية:") if has_arabic("الخبرة العملية:") else "Experience:", ln=True)
+    for line in data["experiences"].splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        prefix = "- "
+        text_line = prefix + line
+        text_line = shape_text(text_line) if has_arabic(text_line) else text_line
+        pdf.multi_cell(0, 6, text_line)
+    pdf.ln(4)
 
-    # اللغات
-    if data.get("languages"):
-        pdf.ln(3)
-        pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 8, "Languages", ln=1)
-        pdf.set_font("Helvetica", "", 11)
-        pdf.multi_cell(0, 6, " • " + " | ".join(data["languages"]))
+    # Education
+    pdf.cell(0, 6, txt=shape_text("التعليم:") if has_arabic("التعليم:") else "Education:", ln=True)
+    for line in data["education"].splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        line_print = shape_text(line) if has_arabic(line) else line
+        pdf.multi_cell(0, 6, "- " + line_print)
 
-    # الخبرات
-    if data.get("experience"):
-        pdf.ln(4)
-        pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 8, "Experience", ln=1)
-        pdf.set_font("Helvetica", "", 11)
-        for x in data["experience"]:
-            header = f"{x['role']} @ {x['company']} ({x['period']})"
-            pdf.multi_cell(0, 6, "• " + header)
-            if x.get("details"): pdf.multi_cell(0, 6, "   - " + x["details"])
+    pdf.ln(4)
+    # Skills
+    pdf.cell(0, 6, txt=shape_text("المهارات:") if has_arabic("المهارات:") else "Skills:", ln=True)
+    pdf.multi_cell(0, 6, shape_text(data["skills"]) if has_arabic(data["skills"]) else data["skills"])
 
-    # التعليم
-    if data.get("education"):
-        pdf.ln(3)
-        pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 8, "Education", ln=1)
-        pdf.set_font("Helvetica", "", 11)
-        for x in data["education"]:
-            pdf.multi_cell(0, 6, f"• {x['degree']} — {x['school']} ({x['year']})")
+    pdf.ln(6)
+    pdf.cell(0, 6, txt=shape_text("معلومات إضافية:") if has_arabic("معلومات إضافية:") else "Extra:", ln=True)
+    extras = f"Languages: {data['languages']} | Hobbies: {data['hobbies']} | Links: {data['links']}"
+    extras_print = shape_text(extras) if has_arabic(extras) else extras
+    pdf.multi_cell(0, 6, extras_print)
 
-    # المشاريع
-    if data.get("projects"):
-        pdf.ln(3)
-        pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 8, "Projects", ln=1)
-        pdf.set_font("Helvetica", "", 11)
-        for x in data["projects"]:
-            line = f"• {x['name']}"
-            if x.get("link"): line += f" — {x['link']}"
-            pdf.multi_cell(0, 6, line)
-            if x.get("desc"): pdf.multi_cell(0, 6, "   - " + x["desc"])
+    # if an image buffer provided
+    if data.get("photo_bytes"):
+        try:
+            # write image to temp file and place at top-right
+            img = Image.open(io.BytesIO(data["photo_bytes"]))
+            # save as temporary jpeg
+            tmp_path = os.path.join(FONTS_DIR, "tmp_profile.jpg")
+            img.convert("RGB").save(tmp_path, "JPEG")
+            # Place image
+            # set x near right margin
+            pdf.image(tmp_path, x=150, y=10, w=40)
+        except Exception:
+            pass
 
-    # الروابط
-    if data.get("links"):
-        pdf.ln(3)
-        pdf.set_font("Helvetica", "B", 13)
-        pdf.cell(0, 8, "Links", ln=1)
-        pdf.set_font("Helvetica", "", 11)
-        for x in data["links"]:
-            pdf.multi_cell(0, 6, f"• {x['label']}: {x['url']}")
+    # produce bytes
+    pdf_bytes = pdf.output(dest="S").encode("latin-1", errors="ignore") if isinstance(pdf.output(dest="S"), str) else pdf.output(dest="S")
+    return pdf_bytes
 
-    # تذييل
-    pdf.ln(5)
-    pdf.set_font("Helvetica", "I", 9)
-    pdf.set_text_color(120, 120, 120)
-    pdf.multi_cell(0, 5, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')} • CV Builder")
+# generate button area
+st.markdown("---")
+st.subheader("إنتاج السيفي (PDF)")
+generate_click = st.button("✅ أنشئ السيفي و نزّل PDF الآن")
 
-    return bytes(pdf.output(dest="S").encode("latin1"))
+if generate_click:
+    # prepare data
+    photo_bytes = None
+    if photo:
+        try:
+            photo_bytes = photo.read()
+        except Exception:
+            photo_bytes = None
 
-# ----------------------------- #
-# أزرار التصدير
-# ----------------------------- #
-with left:
-    st.markdown("<div class='chat-card'>", unsafe_allow_html=True)
-    st.subheader("📤 تصدير")
+    payload = {
+        "name": name,
+        "title": title,
+        "contact": contact,
+        "location": location,
+        "summary": summary,
+        "experiences": experiences,
+        "education": education,
+        "skills": skills,
+        "languages": languages,
+        "hobbies": hobbies,
+        "links": links,
+        "photo_bytes": photo_bytes
+    }
 
-    pdf_bytes = make_pdf(st.session_state.data)
-    st.download_button(
-        "⬇️ تنزيل PDF",
-        data=pdf_bytes,
-        file_name=f"CV_{(st.session_state.data.get('name') or 'my').replace(' ','_')}.pdf",
-        mime="application/pdf",
-    )
-
-    # حفظ JSON بسيط
-    import json
-    st.download_button(
-        "💾 حفظ البيانات (JSON)",
-        data=json.dumps(st.session_state.data, ensure_ascii=False, indent=2),
-        file_name="cv_data.json",
-        mime="application/json",
-    )
-
-    st.caption("تنبيه: لعرض العربية بشكل مثالي داخل الـ PDF، تحتاج إضافة خط TTF لاحقًا (ميزة اختيارية).")
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.spinner("⏳ يجري إنشاء PDF ..."):
+        try:
+            pdf_bytes = build_pdf_bytes(payload)
+            st.success("تم إنشاء PDF بنجاح، حمّله من الزر التالي.")
+            st.download_button("⬇️ حمل CV كـ PDF", data=pdf_bytes, file_name="cv.pdf", mime="application/pdf")
+        except Exception as e:
+            st.error("حصل خطأ أثناء إنشاء PDF. رسالة الخطأ:")
+            st.exception(e)
+            if not font_ok:
+                st.warning("ملاحظة: التطبيق حاول تحميل خط عربي آليًا لكن فشل. حاول تشغيل التطبيق مع اتصال إنترنت أو قم يدوياً بوضع ملف خط TTF عربي داخل مجلد 'fonts/'.")
+else:
+    st.info("اضغط على زر 'أنشئ السيفي' لإنتاج ملف PDF جاهز.")
