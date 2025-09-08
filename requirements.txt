@@ -1,4 +1,3 @@
 streamlit
-transformers
-torch
+fpdf2
 pillow
